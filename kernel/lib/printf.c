@@ -69,6 +69,14 @@ void printf(const char *format, ...)
           convert_to_hex_or_dec(temp, 16);
         }
       }
+      else if (*format == 's')
+      {
+        char *temp = va_arg(ap, char *);
+        for (int i = 0; temp[i] != '\0'; i++)
+        {
+          uart_putc(temp[i]);
+        }
+      }
     }
     else
     {

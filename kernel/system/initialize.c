@@ -1,6 +1,7 @@
 #include <barelib.h>
 #include <interrupts.h>
 #include <bareio.h>
+#include <shell.h>
 /*
  *  This file contains the C code entry point executed by the kernel.
  *  It is called by the bootstrap sequence once the hardware is configured.
@@ -25,8 +26,9 @@ void initialize(void)
   restore_interrupts(mask);
   boot_complete = 1;
   printf("Kernel start: %x\n", text_start);
-  printf("--Kernel size: %d\n", (data_start-text_start));
+  printf("--Kernel size: %d\n", (data_start - text_start));
   printf("Globals start: %x\n", data_start);
   printf("Heap/Stack start: %x\n", mem_start);
-  printf("--Free Memory Available: %d\n", (mem_end-mem_start));
+  printf("--Free Memory Available: %d\n", (mem_end - mem_start));
+  shell(NULL);
 }
