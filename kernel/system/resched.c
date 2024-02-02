@@ -12,19 +12,23 @@ int32 resched(void)
   int current_index = current_thread;
   int next_index = (current_index + 1) % NTHREADS;
   int i = next_index;
-  for (; i < current_index; i = (i + 1) % NTHREADS)
+  for (; i < NTHREADS; i = (i + 1) % NTHREADS)
   {
     if (thread_table[i].state == TH_READY)
     {
       thread_table[current_thread].state = TH_READY;
       thread_table[i].state = TH_RUNNING;
       current_thread = i;
-      ctxsw(&thread_table[current_thread].stackptr, &thread_table[i].stackptr);
+      ctxsw(&thread_table[current_index].stackptr, &thread_table[i].stackptr);
+    }
+    if (i == current_index)
+    {
+      return 0;
     }
   }
-  if (i == current_index)
-  {
-    return 0;
-  }
+  // if (i == current_index)
+  // {
+  //   return 0;
+  // }
   return 0;
 }
