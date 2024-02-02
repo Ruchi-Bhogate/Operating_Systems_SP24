@@ -2,6 +2,7 @@
 #include <interrupts.h>
 #include <bareio.h>
 #include <shell.h>
+#include <thread.h>
 /*
  *  This file contains the C code entry point executed by the kernel.
  *  It is called by the bootstrap sequence once the hardware is configured.
@@ -30,5 +31,14 @@ void initialize(void)
   printf("Globals start: %x\n", data_start);
   printf("Heap/Stack start: %x\n", mem_start);
   printf("--Free Memory Available: %d\n", (mem_end - mem_start));
-  shell(NULL);
+  // shell(NULL);
+  for (int i = 0; i < NTHREADS; i++)
+  {
+    thread_table[i].state = TH_FREE;
+  }
+  int shell_id = create_thread(shell, NULL, 0);
+  current_thread = shell_id;
+  thread_table[current_thread].state = TH_RUNNING;
+  ctxload(&thread_table[current_thread].stackptr);
+  // printf("shell thread is ready");
 }

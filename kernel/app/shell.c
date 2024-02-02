@@ -1,6 +1,7 @@
 #include <bareio.h>
 #include <barelib.h>
 #include <shell.h>
+#include <thread.h>
 
 #define PROMPT "bareOS$ " /*  Prompt printed by the shell to the user  */
 #define MAX_LENGTH 1024   /* Lines are AT MOST 1024 characters long (after expansion) */
@@ -68,16 +69,16 @@ byte shell(char *arg)
         buffer_input[i++] = temp;
       }
     }
-    //printf("%s\n",buffer_input);
+    // printf("%s\n",buffer_input);
     if (command_check(buffer_input, "hello"))
     {
       // printf("inside hello");
-      result = builtin_hello(buffer_input);
+      result = join_thread(resume_thread(create_thread(builtin_hello, buffer_input, i)));
     }
     else if (command_check(buffer_input, "echo"))
     {
       // printf("inside echo");
-      result = builtin_echo(buffer_input);
+      result = join_thread(resume_thread(create_thread(builtin_echo, buffer_input, i)));
     }
     else if (buffer_input[0] == '\0')
     {

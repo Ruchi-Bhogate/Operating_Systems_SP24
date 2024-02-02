@@ -10,6 +10,7 @@
 
 volatile uint32* clint_timer_addr  = (uint32*)0x2004000;
 const uint32 timer_interval = 100000;
+int64 resched(void);
 
 /*
  * This function is called as part of the bootstrapping sequence
@@ -29,6 +30,7 @@ interrupt handle_clk(void) {
   if (boot_complete && is_interrupting()) {
     char mask = disable_interrupts();
 
+    resched();
     restore_interrupts(mask);
   }
 }
