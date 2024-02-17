@@ -1,4 +1,4 @@
-GPORT=5560
+GPORT=9988
 IMG=bareOS.img
 
 ARCH=riscv64-unknown-linux-gnu
@@ -9,16 +9,20 @@ OBJCOPY=$(ARCH)-objcopy
 QEMU=qemu-system-riscv64
 
 IDIR=kernel/include
+TDIR=kernel/testing
 BDIR=.build
 IODIR=io
 MAP=$(BDIR)/kernel.map
+ENV=.env
 
 SRC=$(wildcard kernel/*/*.c)
 ASM=$(wildcard kernel/*/*.s) $(wildcard kernel/*/*.S)
 OBJ=$(patsubst %.c,$(BDIR)/%.o,$(notdir $(SRC))) $(patsubst %.s,$(BDIR)/%_asm.o,$(patsubst %.S,$(BDIR)/%_asm.o,$(notdir $(ASM))))
+OBJ_TEST=$(patsubst %.c,$(BDIR)/%.o,$(notdir $(wildcard $(TDIR)/*.c)))
+OBJ_LINK=$(filter-out $(OBJ_TEST),$(OBJ))
 VPATH=$(dir $(ASM)) $(dir $(SRC))
 
-CFLAGS=-Wall -Werror -fno-builtin -nostdlib -march=rv64imac -mabi=lp64 -mcmodel=medany -I $(IDIR) -O0 -g
+CFLAGS=-Wall -Werror -fno-builtin -nostdlib -march=rv64imac -mabi=lp64 -mcmodel=medany -I $(IDIR) -O0 -g -imacros $(ENV)
 SFLAGS= -I $(IDIR) -march=rv64imac -mabi=lp64 -g
 DFLAGS= -ex "file $(IMG)" -ex "target remote :$(GPORT)"
 EFLAGS= -E -march=rv64imac -mabi=lp64
@@ -27,7 +31,6 @@ QFLAGS=-M virt -kernel $(IMG) -bios none -chardev stdio,id=uart0 -serial chardev
 
 
 STAGE=.setup
-P=$(addprefix project-,$(shell seq 1 10))
 
 .PHONY: all clean qemu qemu-debug gdb dirs pack
 
@@ -36,8 +39,8 @@ all: dirs $(OBJ) $(BDIR)/kernel.elf $(IMG)
 $(IMG): $(BDIR)/kernel.elf
 	$(OBJCOPY) $(BDIR)/kernel.elf -I binary $(IMG)
 
-$(BDIR)/kernel.elf: $(OBJ) kernel/kernel.ld
-	$(LD) $(LDFLAGS) -T kernel/kernel.ld -o $(BDIR)/kernel.elf $(OBJ)
+$(BDIR)/kernel.elf: $(OBJ_LINK) kernel/kernel.ld
+	$(LD) $(LDFLAGS) -T kernel/kernel.ld -o $(BDIR)/kernel.elf $(OBJ_LINK)
 
 %.s: %.S
 	$(CC) $(EFLAGS) $< > $@
@@ -84,8 +87,15 @@ milestone-%: dirs
 		for dir in lib app system include device testing; do \
 			for file in *; do if [ "$$file" != "$${file#$@-$$dir-}" ]; then echo "  Creating kernel/$$dir/$${file#$@-$$dir-}"; cp -i "$$file" ../kernel/$$dir/$${file#$@-$$dir-}; fi done \
 		done
+	@echo "#define MILESTONE $(patsubst milestone-%,%,$@)" > $(ENV)
 	@echo
 	@echo Build complete
+
+test: LDFLAGS += --wrap=shell --wrap=handle_clk --wrap=initialize --wrap=resched
+test: OBJ_LINK += $(OBJ_TEST)
+test: clean dirs all
+	touch $(BDIR)/.force
+	$(MAKE) .qemu
 
 test-milestone-1: EFLAGS += -D BS_ENTRY_FUNC=__ms1
 test-milestone-1: clean dirs all
@@ -102,10 +112,7 @@ test-milestone-3: clean dirs all
 	touch $(BDIR)/.force
 	$(MAKE) .qemu
 
-test-milestone-4: EFLAGS += -D BS_ENTRY_FUNC=__ms4
-test-milestone-4: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-4: test
 
 test-milestone-5: EFLAGS += -D BS_ENTRY_FUNC=__ms5
 test-milestone-5: clean dirs all
