@@ -15,12 +15,14 @@ int32 suspend_thread(uint32 threadid)
   if (thread_table[threadid].state == TH_READY || thread_table[threadid].state == TH_RUNNING)
   {
     thread_table[threadid].state = TH_SUSPEND;
+    thread_dequeue(ready_list);
     raise_syscall(RESCHED);
   }
   else
   {
     threadid = -1;
   }
+
   restore_interrupts(mask);
   return threadid;
 }

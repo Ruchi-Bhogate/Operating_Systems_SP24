@@ -54,5 +54,5 @@ uint32 thread_dequeue(uint32 queue)
   thread_queue[id].qprev = id;
   thread_queue[id].qnext = id;
 
-  return 0;
+  return id;
 }

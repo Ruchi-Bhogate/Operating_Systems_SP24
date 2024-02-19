@@ -26,12 +26,13 @@ int32 resched(void)
   {
     thread_table[current_index].state = TH_READY;
     // thread_table[i].state = TH_RUNNING;
-    thread_table[next_index].state = TH_RUNNING;
+
     thread_enqueue(ready_list, current_index);
     // current_thread = i;
-    current_thread = next_index;
-    ctxsw(&thread_table[current_thread].stackptr, &thread_table[current_index].stackptr);
   }
+  thread_table[next_index].state = TH_RUNNING;
+  current_thread = next_index;
+  ctxsw(&thread_table[current_thread].stackptr, &thread_table[current_index].stackptr);
   //   if (i == current_index)
   //   {
   //     return 0;
