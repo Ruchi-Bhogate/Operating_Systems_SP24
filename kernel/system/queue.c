@@ -17,6 +17,12 @@ void thread_enqueue(uint32 queue, uint32 threadid)
 {
   int key_value = thread_table[threadid].priority;
   int id = queue;
+
+  // if (thread_queue[threadid].qnext != threadid)
+  // {
+  //   return;
+  // }
+
   while (1)
   {
     id = thread_queue[id].qnext;
@@ -34,6 +40,7 @@ void thread_enqueue(uint32 queue, uint32 threadid)
   thread_queue[id].qprev = threadid;
   thread_queue[threadid].qprev = prev_node;
   thread_queue[threadid].qnext = id;
+  thread_queue[threadid].key = key_value;
   return;
 }
 
@@ -46,6 +53,11 @@ uint32 thread_dequeue(uint32 queue)
 
   int id = thread_queue[queue].qnext;
 
+  if (id == queue)
+  {
+    return NTHREADS;
+  }
+
   int prev_node = thread_queue[id].qprev;
   int next_node = thread_queue[id].qnext;
   thread_queue[prev_node].qnext = next_node;
@@ -55,4 +67,18 @@ uint32 thread_dequeue(uint32 queue)
   thread_queue[id].qnext = id;
 
   return id;
+}
+
+void thread_remove(uint32 queue)
+{
+  int prev_node = thread_queue[queue].qprev;
+  int next_node = thread_queue[queue].qnext;
+
+  // thread_queue[queue].key = queue;
+  thread_queue[queue].qprev = queue;
+  thread_queue[queue].qnext = queue;
+
+  thread_queue[prev_node].qnext = next_node;
+  thread_queue[next_node].qprev = prev_node;
+  return;
 }
