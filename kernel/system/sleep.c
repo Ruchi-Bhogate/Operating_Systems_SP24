@@ -33,7 +33,7 @@ int32 sleep(uint32 threadid, uint32 delay) {
     // }
     // 21 -> 1 (100) -> 2 (200) example sleep_list
     int current_index = thread_queue[sleep_list].qnext;
-    while ((current_index != sleep_list) && (key_value <= thread_queue[current_index].key)){
+    while ((current_index != sleep_list) && (key_value >= thread_queue[current_index].key)){
       key_value = key_value - thread_queue[current_index].key;
       current_index = thread_queue[current_index].qnext;
     }
@@ -76,7 +76,8 @@ int32 unsleep(uint32 threadid) {
     return -1;
   }
   int key_value = thread_queue[threadid].key;
-  thread_remove(threadid); // how will this remove from sleep_list?
+  thread_remove(threadid); // how will this remove from sleep_list?i
+  thread_table[threadid].state = TH_READY;
   thread_enqueue(ready_list,threadid);
   thread_queue[id].key = thread_queue[id].key + key_value;
   raise_syscall(RESCHED);

@@ -40,7 +40,7 @@ interrupt handle_clk(void) {
         unsleep(head);
         while ((next_node != sleep_list) && thread_queue[next_node].key == 0){
           unsleep(next_node);
-          next_node = thread_queue[next_node].qnext;
+          next_node = thread_queue[sleep_list].qnext;
         }
       }
     }

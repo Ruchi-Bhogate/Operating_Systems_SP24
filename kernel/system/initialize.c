@@ -33,8 +33,8 @@ void initialize(void)
   printf("--Free Memory Available: %d\n", (mem_end - mem_start));
   // shell(NULL);
 
-  thread_queue[ready_list].qnext = ready_list;
-  thread_queue[sleep_list].qnext = sleep_list;
+  thread_queue[ready_list].qnext = thread_queue[ready_list].qprev = ready_list;
+  thread_queue[sleep_list].qnext = thread_queue[sleep_list].qprev = sleep_list;
 
   for (int i = 0; i < NTHREADS; i++)
   {
