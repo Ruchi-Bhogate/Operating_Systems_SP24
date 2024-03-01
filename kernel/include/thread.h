@@ -9,6 +9,7 @@
 #define TH_READY 2   /*  This list will be extended as we add features  */
 #define TH_SUSPEND 3 /*                                                 */
 #define TH_DEFUNCT 4 /*                                                 */
+#define TH_SLEEP 5 /* added for milestone 5 */                                                
 
 #define THREAD_STACK_SZ ((mem_end - mem_start) / 2) / NTHREADS /*  Macro calculates the size of a thread stack  */
 #define get_stack(n) mem_end - (n * THREAD_STACK_SZ)           /*  Macro gets start of stack by thread index    */

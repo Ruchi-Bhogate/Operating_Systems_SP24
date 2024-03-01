@@ -34,13 +34,14 @@ void initialize(void)
   // shell(NULL);
 
   thread_queue[ready_list].qnext = ready_list;
+  thread_queue[sleep_list].qnext = sleep_list;
 
   for (int i = 0; i < NTHREADS; i++)
   {
     thread_table[i].state = TH_FREE;
   }
 
-  for (int i = 0; i < NTHREADS + 1; i++)
+  for (int i = 0; i < NTHREADS + 2; i++)
   {
     thread_queue[i].qprev = i;
     thread_queue[i].qnext = i;

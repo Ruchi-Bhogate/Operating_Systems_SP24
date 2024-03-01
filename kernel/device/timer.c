@@ -5,6 +5,9 @@
 
 #include <barelib.h>
 #include <interrupts.h>
+#include <thread.h>
+#include <queue.h>
+#include <sleep.h>
 
 #define TRAP_TIMER_ENABLE 0x80
 
@@ -29,7 +32,19 @@ interrupt handle_clk(void) {
   *clint_timer_addr += timer_interval;
   if (boot_complete && is_interrupting()) {
     char mask = disable_interrupts();
-
+    int head = thread_queue[sleep_list].qnext;
+    if (head != sleep_list){
+      thread_queue[head].key --;
+      if (thread_queue[head].key == 0){
+        int next_node = thread_queue[head].qnext;
+        unsleep(head);
+        while ((next_node != sleep_list) && thread_queue[next_node].key == 0){
+          unsleep(next_node);
+          next_node = thread_queue[next_node].qnext;
+        }
+      }
+    }
+    
     resched();
     restore_interrupts(mask);
   }

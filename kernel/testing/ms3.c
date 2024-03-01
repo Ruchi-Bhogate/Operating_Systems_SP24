@@ -2,418 +2,370 @@
 #include <bareio.h>
 #include <thread.h>
 #include <syscall.h>
+#if MILESTONE_IMP >= 4
+#include <queue.h>
+#endif
 
-char* __ms3_general[1];
-char* __ms3_suspend[3];
-char* __ms3_resume[3];
-char* __ms3_join[3];
-char* __ms3_resched[5];
-char* __ms3_shell[5];
+#define STDIN_COUNT 0x0
+#define STDOUT_COUNT 0x1
+#define STDOUT_MATCH 0x2
+#define TIMEOUT 0x5
+#define status_is(cond) (t__status & (0x1 << cond))
+#define test_count(x) sizeof(x) / sizeof(x[0])
+#define init_tests(x, c) for (int i=0; i<c; i++) x[i] = "OK"
+#define assert(test, ls, err) if (!(test)) ls = err
 
-char* __ms3_general_tests[] = {
-			    "\n  Program Compiles:                  \0"
+void __real_ctxload(uint64**);
+void enable_interrupts(void);
+
+void t__print(const char*);
+void t__set_io(const char* stdin, int32 stdin_c, int32 stdout_c);
+byte t__check_io(uint32 count, const char* stdout);
+int  t__with_timeout(int32, void*, ...);
+void t__mem_reset(uint32);
+
+char __real_initialize(char*);
+char __real_shell(char*);
+
+void t__runner(const char* , uint32, void(*)(void));
+void t__printer(const char*, char**, const char**, uint32);
+
+extern uint32 t__resched_called;
+extern uint32 t__join_thread_called;
+extern uint32 t__create_thread_called;
+extern uint32 t__resume_thread_called;
+extern uint32 t__ctxload_called;
+extern byte t__skip_resched;
+extern byte t__default_resched;
+extern uint32 t__status;
+
+static const char* general_prompt[] = {
+			    "  Program Compiles:                   "
 };
-char* __ms3_suspend_tests[] = {
-			    "\n  Indicated thread was suspended:    \0",
-			    "\n  Invalid threads not suspended:     \0",
-			    "\n  Raises RESCHED signal:             \0",
+static const char* suspend_prompt[] = {
+			    "  Indicated thread was suspended:     ",
+			    "  Invalid threads not suspended:      ",
+			    "  Raises RESCHED signal:              ",
 };
-char* __ms3_resume_tests[] = {
-			    "\n  Indicated thread was readied:      \0",
-			    "\n  Invalid threads are ignored:       \0",
-			    "\n  Raises RESCHED signal:             \0"
+static const char* resume_prompt[] = {
+			    "  Indicated thread was readied:       ",
+			    "  Invalid threads are ignored:        ",
+			    "  Raises RESCHED signal:              "
 };
-char* __ms3_join_tests[] = {
-			    "\n  Frees awaited thread:              \0",
-			    "\n  Returns the thread's return value: \0",
-			    "\n  Blocks until thread is defunct:    \0",
+static const char* join_prompt[] = {
+			    "  Frees awaited thread:               ",
+			    "  Returns the thread's return value:  ",
+			    "  Blocks until thread is defunct:     ",
 };
-char* __ms3_resched_tests[] = {
-			    "\n  Alternates between two threads:    \0",
-			    "\n  Cycles between three threads:      \0",
-			    "\n  Sets old thread as ready:          \0",
-			    "\n  Sets the current thread:           \0",
-			    "\n  Sets the new thread to running:    \0",
+static const char* resched_prompt[] = {
+			    "  Alternates between two threads:     ",
+			    "  Cycles between three threads:       ",
+			    "  Sets old thread as ready:           ",
+			    "  Sets the current thread:            ",
+			    "  Sets the new thread to running:     ",
 };
-char* __ms3_shell_tests[] = {
-			     "\n  Started with ctxload:              \0",
-			     "\n  Creates applications with threads: \0",
-			     "\n  Calls `create_thread`:             \0",
-			     "\n  Calls `resume_thread`:             \0",
-			     "\n  Calls `join_thread`:               \0",
+static const char* shell_prompt[] = {
+			    "  Creates applications with threads:  ",
+			    "  Calls `create_thread`:              ",
+			    "  Calls `resume_thread`:              ",
+			    "  Calls `join_thread`:                ",
+};
+static const char* init_prompt[] = {
+			    "  Started with ctxload:               ",
 };
 
-extern char (*sys_putc_hook)(char);
-extern char (*sys_getc_hook)(void);
-extern void (*sys_syscall_hook)(void);
-extern char (*oldhook_in)(void);
-extern char (*oldhook_out)(char);
-extern int32 _sys_thread_loaded;
-extern int __ms_stdout_expects;
-extern int __ms_stdin_expects;
-extern int __ms_syscall_expects;
-extern int _ms_recovery_status;
-char putc_tester(char);
-char getc_tester(void);
-void syscall_tester(void);
-void _psudoprint(const char*);
-void _prep_stdin(const char*);
-void __clear_string(void);
-char __test_string(const char*, int, int);
+static char* general_t[test_count(general_prompt)];
+static char* suspend_t[test_count(suspend_prompt)];
+static char* resume_t[test_count(resume_prompt)];
+static char* join_t[test_count(join_prompt)];
+static char* resched_t[test_count(resched_prompt)];
+static char* shell_t[test_count(shell_prompt)];
+static char* init_t[test_count(init_prompt)];
 
-int _ms_safe_call(void*, ...);
-
-char initialize(char*);
-char shell(char*);
-void ctxload(uint64**);
-char disable_interrupts(void);
-
-void __ms3_reset_threads(void) {
-  for (int i=1; i<NTHREADS; i++) thread_table[i].state = TH_FREE;
-  current_thread = 0;
-}
-
-void _ms_protoresume(int32 tid) {
+static void resume(uint32 tid) {
   thread_table[tid].state = TH_READY;
+#if MILESTONE_IMP >= 4
+  thread_enqueue(ready_list, tid);
+#endif
 }
 
-char __ms3_t1(char* arg) {
+static char thread_1(char* arg) {
   return 0;
 }
 
-byte __ms3_t2_validator = 0;
-char __ms3_t2(char* arg) {
-  byte validator = __ms3_t2_validator;
-  __ms3_t2_validator += 1;
+static byte t2_val = 0;
+static char add_by_two(char* arg) {
+  byte v = t2_val;
+  t2_val += 1;
   raise_syscall(RESCHED);
-  if (__ms3_t2_validator < validator + 2)
-    __ms3_resched[0] = "FAIL - Thread ran again before all other threads ran\0";
-  __ms3_t2_validator += 1;
+  assert(t2_val >= v + 2, resched_t[0], "FAIL - Thread ran again before all other threads ran");
+  t2_val += 1;
   raise_syscall(RESCHED);
-  if (__ms3_t2_validator < validator + 4)
-    __ms3_resched[0] = "FAIL - Thread ran again before all other threaads ran\0";
+  assert(t2_val >= v + 4, resched_t[0], "FAIL - Thread ran again before all other threads ran");
   return 0;
 }
 
-byte __ms3_t3_validator = 0;
-char __ms3_t3(char* arg) {
-  byte validator = __ms3_t3_validator;
-  __ms3_t3_validator += 1;
+static byte t3_val = 0;
+char add_by_three(char* arg) {
+  byte v = t3_val;
+  t3_val += 1;
   raise_syscall(RESCHED);
-  if (__ms3_t3_validator < validator + 3)
-    __ms3_resched[1] = "FAIL - Thread ran again before all other threads ran\0";
-  __ms3_t3_validator += 1;
+  assert(t3_val >= v + 3, resched_t[1], "FAIL - Thread ran again before all other threads ran");
+  t3_val += 1;
   raise_syscall(RESCHED);
-  if (__ms3_t3_validator < validator + 6)
-    __ms3_resched[1] = "FAIL - Thread ran again before all other threaads ran\0";
-  __ms3_t3_validator += 1;
+  assert(t3_val >= v + 6, resched_t[1], "FAIL - Thread ran again before all other threads ran");
+  t3_val += 1;
   return 0;
 }
 
-char __ms3_t4(char* arg) {
-  switch (thread_table[0].state) {
-  case TH_FREE    : __ms3_resched[2] = "FAIL - Previous thread set to FREE\0"; break;
-  case TH_RUNNING : __ms3_resched[2] = "FAIL - Previous thread set to RUNNING\0"; break;
-  case TH_SUSPEND : __ms3_resched[2] = "FAIL - Previous thread set to SUSPEND\0"; break;
-  case TH_DEFUNCT : __ms3_resched[2] = "FAIL - Previous thread set to DEFUNCT\0"; break;
-  default : break;
-  }
-
-  if (current_thread == 0)
-    __ms3_resched[3] = "FAIL - Current thread is not set to the newly running thread\0";
-
-  switch (thread_table[current_thread].state) {
-  case TH_FREE    : __ms3_resched[4] = "FAIL - Current running thread set to FREE\0"; break;
-  case TH_READY   : __ms3_resched[4] = "FAIL - Current running thread set to READY\0"; break;
-  case TH_SUSPEND : __ms3_resched[4] = "FAIL - Current running thread set to SUSPEND\0"; break;
-  case TH_DEFUNCT : __ms3_resched[4] = "FAIL - Current running thread set to DEFUNCT\0"; break;
-  }
+char state_tester(char* arg) {
+  assert(thread_table[0].state != TH_FREE,                 resched_t[2], "FAIL - Previous thread was set to FREE");
+  assert(thread_table[0].state != TH_RUNNING,              resched_t[2], "FAIL - Previous thread set to RUNNING");
+  assert(thread_table[0].state != TH_SUSPEND,              resched_t[2], "FAIL - Previous thread set to SUSPEND");
+  assert(thread_table[0].state != TH_DEFUNCT,              resched_t[2], "FAIL - Previous thread set to DEFUNCT");
+  assert(current_thread != 0,                              resched_t[3], "FAIL - 'current_thread' is not set to the newly running thread");
+  assert(thread_table[current_thread].state != TH_FREE,    resched_t[4], "FAIL - 'current_thread' is set to FREE");
+  assert(thread_table[current_thread].state != TH_READY,   resched_t[4], "FAIL - 'current_thread' is set to READY");
+  assert(thread_table[current_thread].state != TH_SUSPEND, resched_t[4], "FAIL - 'current_thread' is set to SUSPEND");
+  assert(thread_table[current_thread].state != TH_DEFUNCT, resched_t[4], "FAIL - 'current_thread' is set to DEFUNCT");
   return 0;
 }
 
-void __ms3_suspend_tester(void) {
-  __ms3_reset_threads();
-  /*
-   * Sets called thread to suspend if valid
-   * Ignores invalid threads
-   * Raises RESCHED
-   */
-  __ms_syscall_expects = 0;
-  int32 tid = create_thread(__ms3_t1, "", 0);
-  thread_table[tid].state = TH_READY;
-  (int)_ms_safe_call((void (*)(void))suspend_thread, tid);
-  switch (thread_table[tid].state) {
-  case TH_FREE    : __ms3_suspend[0] = "FAIL - Thread set to FREE after suspend\0"; break;
-  case TH_RUNNING : __ms3_suspend[0] = "FAIL - Thread set to RUNNING after suspend\0"; break;
-  case TH_READY   : __ms3_suspend[0] = "FAIL - Thread set to READY after suspend\0"; break;
-  case TH_DEFUNCT : __ms3_suspend[0] = "FAIL - Thread set to DEFUNCT after suspend\0"; break;
-  default : break;
-  }
-  if (_ms_recovery_status != 3) {
-    __ms3_suspend[2] = "FAIL - RESCHED system call was not raised\0";
-  }
-  
-  __ms_syscall_expects = 0;
+static void general_tests(void) {
+  return;
+}
+
+static void suspend_tests(void) {
+  int32 tid = create_thread(thread_1, "", 0);
+  resume(tid);
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))suspend_thread, tid);
+
+  assert(thread_table[tid].state != TH_FREE, suspend_t[0], "FAIL - Thread set to FREE after suspend call");
+  assert(thread_table[tid].state != TH_RUNNING, suspend_t[0], "FAIL - Thread set to RUNNING after suspend call");
+  assert(thread_table[tid].state != TH_READY, suspend_t[0], "FAIL - Thread set to READY after suspend call");
+  assert(thread_table[tid].state != TH_DEFUNCT, suspend_t[0], "FAIL - Thread set to DEFUNCT after suspend call");
+  assert(t__resched_called, suspend_t[2], "FAIL - RESCHED system call was not raised");
+
   thread_table[tid].state = TH_FREE;
-  (int)_ms_safe_call((void (*)(void))suspend_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_suspend[1] = "FAIL - RESCHED called when thread was FREE\0";
-  }
-  __ms_syscall_expects = 0;
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))suspend_thread, tid);
+  
+  assert(t__resched_called == 0, suspend_t[1], "FAIL - RESCHED called when thread was FREE");
+  
   thread_table[tid].state = TH_SUSPEND;
-  (int)_ms_safe_call((void (*)(void))suspend_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_suspend[1] = "FAIL - RESCHED called when thread was SUSPEND\0";
-  }
-  __ms_syscall_expects = 0;
-  thread_table[tid].state = TH_DEFUNCT;
-  (int)_ms_safe_call((void (*)(void))suspend_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_suspend[1] = "FAIL - RESCHED called when thread was DEFUNCT\0";
-  }
-}
-
-void __ms3_resume_tester(void) {
-  __ms3_reset_threads();
-  /*
-   * Sets called thread to TH_READY if suspended
-   * Ignores invalid threads
-   * Raises RESCHED
-   */
-  __ms_syscall_expects = 0;
-  int32 tid = create_thread(__ms3_t1, "", 0);
-  (int)_ms_safe_call((void (*)(void))resume_thread, tid);
-  switch (thread_table[tid].state) {
-  case TH_FREE    : __ms3_resume[0] = "FAIL - Thread set to FREE after resume\0"; break;
-  case TH_RUNNING : __ms3_resume[0] = "FAIL - Thread set to RUNNING after resume\0"; break;
-  case TH_SUSPEND : __ms3_resume[0] = "FAIL - Thread set to SUSPEND after resume\0"; break;
-  case TH_DEFUNCT : __ms3_resume[0] = "FAIL - Thread set to DEFUNCT after suspend\0"; break;
-  default : break;
-  }
-  if (_ms_recovery_status != 3) {
-    __ms3_resume[2] = "FAIL - RESCHED system call was not raised\0";
-  }
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))suspend_thread, tid);
   
-  __ms_syscall_expects = 0;
-  thread_table[tid].state = TH_FREE;
-  (int)_ms_safe_call((void (*)(void))resume_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_resume[1] = "FAIL - RESCHED called when thread was FREE\0";
-  }
-  __ms_syscall_expects = 0;
-  thread_table[tid].state = TH_RUNNING;
-  (int)_ms_safe_call((void (*)(void))resume_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_resume[1] = "FAIL - RESCHED called when thread was RUNNING\0";
-  }
-  __ms_syscall_expects = 0;
-  thread_table[tid].state = TH_READY;
-  (int)_ms_safe_call((void (*)(void))resume_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_resume[1] = "FAIL - RESCHED called when thread was READY\0";
-  }
-  __ms_syscall_expects = 0;
+  assert(t__resched_called == 0, suspend_t[1], "FAIL - RESCHED called when thread was SUSPEND");
+
   thread_table[tid].state = TH_DEFUNCT;
-  (int)_ms_safe_call((void (*)(void))resume_thread, tid);
-  if (_ms_recovery_status == 3) {
-    __ms3_resume[1] = "FAIL - RESCHED called when thread was DEFUNCT\0";
-  }
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))suspend_thread, tid);
+  
+  assert(t__resched_called == 0, suspend_t[1], "FAIL - RESCHED called when thread was DEFUNCT");
 }
 
-void __ms3_join_tester(void) {
-  int result;
-  __ms3_reset_threads();
-  /*
-   * Sets called thread to TH_FREE if TH_DEFUNCT
-   * Returns the processes retval
-   * Rescheds while thread is not TH_DEFUNCT
-   */
-  __ms_syscall_expects = 0;
-  int32 tid = create_thread(__ms3_t1, "", 0);
+static void resume_tests(void) {
+  int32 tid = create_thread(thread_1, "", 0);
+  t__with_timeout(10, (void (*)(void))resume_thread, tid);
+
+  assert(thread_table[tid].state != TH_FREE, resume_t[0], "FAIL - Thread set to FREE after resume call");
+  assert(thread_table[tid].state != TH_RUNNING, resume_t[0], "FAIL - Thread set to RUNNING after resume call");
+  assert(thread_table[tid].state != TH_SUSPEND, resume_t[0], "FAIL - Thread set to SUSPEND after resume call");
+  assert(thread_table[tid].state != TH_DEFUNCT, resume_t[0], "FAIL - Thread set to DEFUNCT after resume call");
+  assert(t__resched_called, resume_t[2], "FAIL - RESCHED system call was not raise");
+  
+  thread_table[tid].state = TH_FREE;
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))resume_thread, tid);
+  
+  assert(t__resched_called == 0, resume_t[1], "FAIL - RESCHED called when thread was FREE");
+  
+  thread_table[tid].state = TH_RUNNING;
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))resume_thread, tid);
+
+  assert(t__resched_called == 0, resume_t[1], "FAIL - RESCHED called when thread was RUNNING");
+
+  resume(tid);
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))resume_thread, tid);
+
+  assert(t__resched_called == 0, resume_t[1], "FAIL - RESCHED called when thread was ready");
+
+  thread_table[tid].state = TH_DEFUNCT;
+  t__resched_called = 0;
+  t__with_timeout(10, (void (*)(void))resume_thread, tid);
+
+  assert(t__resched_called == 0, resume_t[1], "FAIL - RESCHED called when thread was DEFUNCT");
+}
+
+static void join_tests(void) {
+  byte result;
+  int32 tid = create_thread(thread_1, "", 0);
   thread_table[tid].state = TH_DEFUNCT;
   thread_table[tid].retval = 12;
-  result = (int)_ms_safe_call((void (*)(void))join_thread, tid);
-  if (_ms_recovery_status == 3)
-    __ms3_join[0] = "FAIL - RESCHED raised when thread was DEFUNCT\0";
-  else if (thread_table[tid].state == TH_RUNNING)
-    __ms3_join[0] = "FAIL - Thread state set to RUNNING after join\0";
-  else if (thread_table[tid].state == TH_READY)
-    __ms3_join[0] = "FAIL - Thread state set to READY after join\0";
-  else if (thread_table[tid].state == TH_SUSPEND)
-    __ms3_join[0] = "FAIL - Thread state set to SUSPEND after join\0";
-  else if (thread_table[tid].state == TH_DEFUNCT)
-    __ms3_join[0] = "FAIL - Thread state set to DEFUNCT after join\0";
 
-  if (result != 12)
-    __ms3_join[1] = "FAIL - `join_thread` did not return thread result\0";
+  t__resched_called = 0;
+  result = (byte)t__with_timeout(10, (void (*)(void))join_thread, tid);
 
-  __ms_syscall_expects = 0;
-  thread_table[tid].state = TH_READY;
-  (int)_ms_safe_call((void (*)(void))join_thread, tid);
-  if (_ms_recovery_status != 3)
-    __ms3_join[2] = "FAIL - REACHED not raised when thread was READY\0";
-  __ms_syscall_expects = 0;
+  assert(t__resched_called == 0, join_t[0], "FAIL - RESCHED raised when thread was already DEFUNCT");
+  assert(thread_table[tid].state != TH_RUNNING, join_t[0], "FAIL - Joined thread's state was RUNNING after join");
+  assert(thread_table[tid].state != TH_READY, join_t[0], "FAIL - Joined thread's state was READY after join");
+  assert(thread_table[tid].state != TH_SUSPEND, join_t[0], "FAIL - Joined thread's state was SUSPEND after join");
+  assert(thread_table[tid].state != TH_DEFUNCT, join_t[0], "FAIL - Joined thread's state was still DEFUNCT after join");
+  assert(result == 12, join_t[1], "FAIL - 'join_thread' did not return the thread's result");
+
+  t__resched_called = 0;
+  resume(tid);
+  t__with_timeout(10, (void (*)(void))join_thread, tid);
+
+  assert(t__resched_called > 100, join_t[2], "FAIL - 'join_thread' not busy waiting on RESCHED when thread is READY");
+  assert(t__resched_called, join_t[2], "FAIL - RESCHED not raised when joined thread was READY");
+
+  t__resched_called = 0;
   thread_table[tid].state = TH_FREE;
-  (int)_ms_safe_call((void (*)(void))join_thread, tid);
-  if (_ms_recovery_status == 3)
-    __ms3_join[2] = "FAIL - REACHED raised when thread was FREE\0";
-  __ms_syscall_expects = 0;
+  t__with_timeout(10, (void (*)(void))join_thread, tid);
+
+  assert(t__resched_called == 0, join_t[2], "FAIL - RESCHED raised when joined thread was FREE");
+
+  t__resched_called = 0;
   thread_table[tid].state = TH_RUNNING;
-  (int)_ms_safe_call((void (*)(void))join_thread, tid);
-  if (_ms_recovery_status != 3)
-    __ms3_join[2] = "FAIL - REACHED not raised when thread was RUNNING\0";
-  __ms_syscall_expects = 0;
+  t__with_timeout(10, (void (*)(void))join_thread, tid);
+
+  assert(t__resched_called > 100, join_t[2], "FAIL - 'join_thread' not busy waiting on RESCHED when thread is RUNNING");
+  assert(t__resched_called, join_t[2], "FAIL - RESCHED not raised when joined thread was RUNNING");
+
+  t__resched_called = 0;
   thread_table[tid].state = TH_SUSPEND;
-  (int)_ms_safe_call((void (*)(void))join_thread, tid);
-  if (_ms_recovery_status != 3)
-    __ms3_join[2] = "FAIL - REACHED not raised when thread was SUSPEND\0";
+  t__with_timeout(10, (void (*)(void))join_thread, tid);
+  
+  assert(t__resched_called > 100, join_t[2], "FAIL - 'join_thread' not busy waiting on RESCHED when thread is SUSPEND");
+  assert(t__resched_called, join_t[2], "FAIL - RESCHED not raised when joined thread was SUSPEND");
 }
 
-void __ms3_resched_tester(void) {
-  thread_table[0].state = TH_RUNNING;
-  __ms3_reset_threads();
-  /*
-   * Correctly swaps two threads
-   * Correctly cycles three threads
-   * Sets previous thread state to TH_READY
-   * Sets the current_thread
-   * Sets the new thread state to TH_RUNNING
-   */
-  __ms_syscall_expects = -1;
-  int32 tid1 = create_thread(__ms3_t4, "", 0);
-  _ms_protoresume(tid1);
-  raise_syscall(RESCHED);
-
-  __ms3_reset_threads();
-  tid1 = create_thread(__ms3_t2, "", 0);
-  _ms_protoresume(tid1);
-  raise_syscall(RESCHED);
-  __ms3_t2_validator += 1;
-  raise_syscall(RESCHED);
-  __ms3_t2_validator += 1;
-  raise_syscall(RESCHED);
-
-  __ms3_reset_threads();
-  tid1 = create_thread(__ms3_t3, "", 0);
-  int32 tid2 = create_thread(__ms3_t3, "", 0);
-  _ms_protoresume(tid1);
-  _ms_protoresume(tid2);
-  raise_syscall(RESCHED);
-  __ms3_t3_validator += 1;
-  raise_syscall(RESCHED);
-  __ms3_t3_validator += 1;
+static void resched_01(void) {
+  int32 tid1;
+  tid1 = create_thread(state_tester, "", 0);
+  resume(tid1);
   raise_syscall(RESCHED);
 }
 
-void __ms3_shell_tester(void) {
-  __ms3_reset_threads();
-  /*
-   * Initializes with ctxload
-   * Creates applications as threads
-   * Calls create_thread
-   * Calls resume_thread
-   * Calls join_thread
-   */
-
-  __ms_stdin_expects = 8;
-  _prep_stdin("hello v\n\0");
-  __ms_syscall_expects = 1;
-  (int)_ms_safe_call((void (*)(void))shell);
-  if (_ms_recovery_status != 3)
-    __ms3_shell[1] = "FAIL - RESCHED not called when starting application\0";
-  __ms3_shell[2] = "N/A - Test could not be automated\0";
-  __ms3_shell[3] = "N/A - Test could not be automated\0";
-  __ms3_shell[4] = "N/A - Test could not be automated\0";
-
-
-  __ms_stdin_expects = 0;
-  __ms_syscall_expects = 0;
-  _sys_thread_loaded = 0;
-  _prep_stdin("\0");
-  (int)_ms_safe_call((void (*)(void))initialize);
-  disable_interrupts();
-  if (!_sys_thread_loaded)
-    __ms3_shell[0] = "FAIL - `ctxload` not called\0";
-  
-  _psudoprint("\nShell Tests:\0");
-  for (int i=0; i<5; i++) {
-    _psudoprint(__ms3_shell_tests[i]);
-    _psudoprint(__ms3_shell[i]);
-  }
-
-  _psudoprint("\n\n");
-  asm volatile (
-		"__loop:\n"
-                    "wfi\n"
-                    "j __loop\n"
-		);
+static void resched_02(void) {
+  int32 tid1;
+  tid1 = create_thread(add_by_two, "", 0);
+  resume(tid1);
+  raise_syscall(RESCHED);
+  t2_val += 1;
+  raise_syscall(RESCHED);
+  t2_val += 1;
+  raise_syscall(RESCHED);
+  assert(t2_val > 2, resched_t[0], "FAIL - Test thread was not scheduled");
 }
 
-char __ms3_runner(char* arg) {
-  int i;
-  for (i=0; i<1; i++) __ms3_general[i] = "OK\0";
-  for (i=0; i<3; i++) __ms3_suspend[i] = "OK\0";
-  for (i=0; i<3; i++) __ms3_resume[i]  = "OK\0";
-  for (i=0; i<3; i++) __ms3_join[i]    = "OK\0";
-  for (i=0; i<5; i++) __ms3_resched[i] = "OK\0";
-  for (i=0; i<5; i++) __ms3_shell[i]   = "OK\0";
-  
-  _psudoprint("\n  * Expected test count: 20\n  *     Less than 20 results should be considered a test failure\n\0");
+static void resched_03(void) {
+  int32 tid1, tid2;
+  tid1 = create_thread(add_by_three, "", 0);
+  tid2 = create_thread(add_by_three, "", 0);
+  resume(tid1);
+  resume(tid2);
+  raise_syscall(RESCHED);
+  t3_val += 1;
+  raise_syscall(RESCHED);
+  t3_val += 1;
+  raise_syscall(RESCHED);
+  assert(t3_val > 2, resched_t[2], "FAIL - Test thread was not scheduled");
+}
 
-  _psudoprint("\nGeneral Tests:\0");
-  for (i=0; i<1; i++) {
-    _psudoprint(__ms3_general_tests[i]);
-    _psudoprint(__ms3_general[i]);
-  }
-  
-  __ms3_suspend_tester();
-  _psudoprint("\nSuspend Tests:\0");
-  for (i=0; i<3; i++) {
-    _psudoprint(__ms3_suspend_tests[i]);
-    _psudoprint(__ms3_suspend[i]);
-  }
-  __ms3_resume_tester();
-  _psudoprint("\nResume Tests:\0");
-  for (i=0; i<3; i++) {
-    _psudoprint(__ms3_resume_tests[i]);
-    _psudoprint(__ms3_resume[i]);
-  }
+static void resched_tests(void) {
+  t__skip_resched = 0;
+  t__default_resched = 1;
 
-  __ms3_join_tester();
-  _psudoprint("\nJoin Tests:\0");
-  for (i=0; i<3; i++) {
-    _psudoprint(__ms3_join_tests[i]);
-    _psudoprint(__ms3_join[i]);
-  }
+  t__with_timeout(10, (void (*)(void))resched_01);
+  assert(!status_is(TIMEOUT), resched_t[2], "TIMEOUT -- Test was stuck in infinite loop");
+  assert(!status_is(TIMEOUT), resched_t[3], "TIMEOUT -- Test was stuck in infinite loop");
+  assert(!status_is(TIMEOUT), resched_t[4], "TIMEOUT -- Test was stuck in infinite loop");
 
-  __ms3_resched_tester();
-  _psudoprint("\nResched Tests:\0");
-  for (i=0; i<5; i++) {
-    _psudoprint(__ms3_resched_tests[i]);
-    _psudoprint(__ms3_resched[i]);
-  }
+  t__mem_reset(1);
+  enable_interrupts();
+  t__with_timeout(10, (void (*)(void))resched_02);
+  assert(!status_is(TIMEOUT), resched_t[0], "TIMEOUT -- Test was stuck in infinite loop");
 
-  __ms3_shell_tester();
-  _psudoprint("\nShell Tests:\0");
-  for (i=0; i<5; i++) {
-    _psudoprint(__ms3_shell_tests[i]);
-    _psudoprint(__ms3_shell[i]);
-  }
+  t__mem_reset(1);
+  enable_interrupts();
+  t__with_timeout(10, (void (*)(void))resched_03);
+  assert(!status_is(TIMEOUT), resched_t[1], "TIMEOUT -- Test was stuck in infinite loop");
+}
 
-  _psudoprint("\n\n");
+static void shell_tests(void) {
+  t__set_io("hello v\n", 9, 100);
+  t__resched_called = t__create_thread_called = t__resume_thread_called = t__join_thread_called = 0;
+  t__with_timeout(10, (void (*)(void))__real_shell);
+
+  assert(t__resched_called, shell_t[0], "FAIL - RESCHED not called when starting a thread from the shell");
+  assert(t__create_thread_called == 1, shell_t[1], "FAIL - 'create_thread' not called from shell on new thread");
+  assert(t__resume_thread_called == 1, shell_t[2], "FAIL - 'resume_thread' not called from shell on new thread");
+  assert(t__join_thread_called == 1, shell_t[3], "FAIL - 'join_thread' not called from shell on new thread");
+}
+
+static void initialize_tests(void) {
+  t__ctxload_called = 0;
+  t__with_timeout(10, (void (*)(void))__real_initialize);
+
+  assert(t__ctxload_called == 1, init_t[0], "FAIL - 'ctxload' not called during initializiation");
+}
+
+static byte runner(char* arg) {
+  uint32 idx = *(int*)arg;
+  if (idx == 0) {
+    t__print("\n");
+    init_tests(general_t, test_count(general_prompt));
+    t__runner("general", test_count(general_prompt), general_tests);
+  }
+  else if (idx == 1) {
+    init_tests(suspend_t, test_count(suspend_prompt));
+    t__runner("suspend", test_count(suspend_prompt), suspend_tests);
+  }
+  else if (idx == 2) {
+    init_tests(resume_t, test_count(resume_prompt));
+    t__runner("resume", test_count(resume_prompt), resume_tests);
+  }
+  else if (idx == 3) {
+    init_tests(join_t, test_count(join_prompt));
+    t__runner("join", test_count(join_prompt), join_tests);
+  }
+  else if (idx == 4) {
+    init_tests(resched_t, test_count(resched_prompt));
+    t__runner("resched", test_count(resched_prompt), resched_tests);
+  }
+  else if (idx == 5) {
+    init_tests(shell_t, test_count(shell_prompt));
+    t__runner("shell", test_count(shell_prompt), shell_tests);
+  }
   return 0;
 }
 
-void __ms3(void) {
-  thread_table[0].state = TH_FREE;
-  uart_init();
-  oldhook_out = sys_putc_hook;
-  oldhook_in = sys_getc_hook;
-  __clear_string();
-  sys_putc_hook = putc_tester;
-  sys_getc_hook = getc_tester;
-  sys_syscall_hook = syscall_tester;
-    
-  int32 tid = create_thread(__ms3_runner, "", 0);
-  ctxload(&(thread_table[tid].stackptr));
+void t__ms3(uint32 idx) {
+  t__skip_resched = 1;
+  if (idx < 6) {
+    int32 tid = create_thread(runner, (char*)(&idx), sizeof(uint32));
+    thread_table[tid].state = TH_RUNNING;
+    __real_ctxload(&(thread_table[tid].stackptr));
+  }
+  else if  (idx == 6) {
+    init_tests(init_t, test_count(init_prompt));
+    t__runner("init", test_count(init_prompt), initialize_tests);
+  }
+  else {
+    t__print("\n----------------------------\n");
+    t__printer("\nGeneral Tests:", general_t, general_prompt, test_count(general_prompt));
+    t__printer("\nSuspend Tests:", suspend_t, suspend_prompt, test_count(suspend_prompt));
+    t__printer("\nResume Tests:", resume_t, resume_prompt, test_count(resume_prompt));
+    t__printer("\nJoin Tests:", join_t, join_prompt, test_count(join_prompt));
+    t__printer("\nResched Tests:", resched_t, resched_prompt, test_count(resched_prompt));
+    t__printer("\nShell Tests:", shell_t, shell_prompt, test_count(shell_prompt));
+    t__printer("\nInit Tests:", init_t, init_prompt, test_count(init_prompt));
+    t__print("\n");
+  }
 }

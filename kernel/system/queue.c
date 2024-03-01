@@ -6,8 +6,10 @@
  *  of each element, starting at the "root" should always eventually lead back to the "root".
  *  The same should be true in reverse using 'qprev'.                                          */
 
-queue_t thread_queue[NTHREADS + 1]; /*  Array of queue elements, one per thread plus one for the read_queue root  */
+queue_t thread_queue[NTHREADS + 2]; /*  Array of queue elements, one per thread plus one for the read_queue root */
+                                    /* Added one more plus one to accomodate head of sleep_list */
 uint32 ready_list = NTHREADS + 0;   /*  Index of the read_list root  */
+uint32 sleep_list = NTHREADS + 1;   /*  Index of the sleep_list root */
 
 /*  'thread_enqueue' takes an index into the thread_queue  associated with a queue "root"  *
  *  and a threadid of a thread to add to the queue.  The thread will be added to the tail  *

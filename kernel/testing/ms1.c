@@ -1,185 +1,162 @@
 #include <barelib.h>
 #include <bareio.h>
 
+#define STDIN_COUNT 0x0
+#define STDOUT_COUNT 0x1
+#define STDOUT_MATCH 0x2
+#define TIMEOUT 0x5
+#define status_is(cond) (t__status & (0x1 << cond))
+#define test_count(x) sizeof(x) / sizeof(x[0])
+#define init_tests(x, c) for (int i=0; i<c; i++) x[i] = "OK"
+#define assert(test, ls, err) if (!(test)) ls = err
+
 extern uint32* text_start;    /*                                             */
 extern uint32* data_start;    /*  These variables automatically contain the  */
 extern uint32* bss_start;     /*  lowest  address of important  segments in  */
 extern uint32* mem_start;     /*  memory  created  when  the  kernel  boots  */
 extern uint32* mem_end;       /*    (see mmap.c and kernel.ld for source)    */
 
-char* __ms1_general[2];
-char* __ms1_printf[4];
-char* __ms1_init[5];
+extern uint32 t__uart_putc_called;
+extern uint32 t__status;
 
-extern char (*sys_putc_hook)(char);
-extern char (*oldhook_in)(void);
-extern char (*oldhook_out)(char);
-extern int __ms_stdout_search;
-extern int __ms_stdout_expects;
-extern int __ms_stdin_expects;
-extern int _ms_recovery_status;
-char putc_tester(char);
-void _psudoprint(const char*);
-char* _copy_dec(char*, int);
-char* _copy_hex(char*, unsigned int);
-char* _copy_string(char*, const char*);
-void __clear_string(void);
-char __test_string(const char*, int, int);
-char __test_template(const char*);
+void  t__print(const char*);
+char* t__intcpy(char*, int);
+char* t__hexcpy(char*, unsigned int);
+char* t__strcpy(char*, const char*);
+char* t__raw_stdout(void);
 
-int _ms_safe_call(void*, ...);
+int  t__with_timeout(uint32, void*, ...);
+void t__set_io(const char* stdin, int32 stdin_c, int32 stdout_c);
+byte t__check_io(uint32 count, const char* stdout);
 
-void initialize(void);
+void __real_initialize(void);
 
-char* __ms1_general_tests[] = {
-			    "\n  Program compiles:                             \0",
-			    "\n  `printf` is callable:                         \0"
+void t__runner(const char* , uint32, void(*)(void));
+void t__printer(const char*, char**, const char**, uint32);
+
+static const char* general_prompt[] = {
+				       "  Program Compiles:                     ",
+				       "  `printf' is callable:                 ",
 };
-char* __ms1_printf_tests[] = {
-			    "\n  Calls `uart_putc`:                            \0",
-			    "\n  Text passed to `uart_putc`:                   \0",
-			    "\n  Decimal '%d' template prints int:             \0",
-			    "\n  Hexidecimal '%x' template prints hex:         \0",
+static const char* printf_prompt[] = {
+				       "  Calls `uart_putc`:                    ",
+				       "  Text passed to `uart_putc`:           ",
+				       "  Decimal '%d' template prints int:     ",
+				       "  Hexidecimal '%x' template prints hex: ",
 };
-char* __ms1_init_tests[] = {
-			    "\n  Prints correct Text start:                    \0",
-			    "\n  Prints correct Kernel size:                   \0",
-			    "\n  Prints correct Data start:                    \0",
-			    "\n  Prints correct Memory start:                  \0",
-			    "\n  Prints correct Memory size:                   \0"
+static const char* init_prompt[] = {
+				       "  Prints correct Text start:            ",
+				       "  Prints correct Kernel size:           ",
+				       "  Prints correct Data start:            ",
+				       "  Prints correct Memory start:          ",
+				       "  Prints correct Memory size:           ",
 };
 
-void __ms1(void) {
-  char init_text[1024];
-  uart_init();
-  oldhook_out = sys_putc_hook;
-  sys_putc_hook = putc_tester;
+static char* general_t[test_count(general_prompt)];
+static char* printf_t[test_count(printf_prompt)];
+static char* init_t[test_count(init_prompt)];
 
-  for (int i=0; i<2; i++) __ms1_general[i] = "OK\0";
-  for (int i=0; i<4; i++) __ms1_printf[i]  = "OK\0";
-  for (int i=0; i<5; i++) __ms1_init[i]    = "OK\0";
-  for (int i=0; i<1024; i++) init_text[i] = 0;
+static byte same_line(const char* a, const char* b) {
+  int i;
+  for (i=0; a[i] == b[i] && a[i] != '\n'; i++);
+  return a[i] == b[i];
+}
 
-  /* Build initialize test text */
-  char* ptr = init_text;
-  ptr = _copy_string(ptr, "Kernel start: 0x");
-  ptr = _copy_hex(ptr, (unsigned long)text_start);
-  ptr = _copy_string(ptr, "\n--Kernel size: ");
-  ptr = _copy_dec(ptr, (unsigned long)(data_start - text_start));
-  ptr = _copy_string(ptr, "\nGlobals start: 0x");
-  ptr = _copy_hex(ptr, (unsigned long)data_start);
-  ptr = _copy_string(ptr, "\nHeap/Stack start: 0x");
-  ptr = _copy_hex(ptr, (unsigned long)mem_start);
-  ptr = _copy_string(ptr, "\n--Free Memory Available: ");
-  ptr = _copy_dec(ptr, (unsigned long)(mem_end - mem_start));
+static void general_tests(void) {
+  t__set_io("", -1, 5);
+  t__with_timeout(10, (void (*)(void))printf, "basic");
 
-  // printf test 1
-  __ms_stdout_expects = 5;
-  __clear_string();
-  _ms_safe_call((void (*)(void))printf, "basic");
-  if (_ms_recovery_status)
-    __ms1_general[1] = "FAIL - `printf` function never returns\0";
-  if (__test_string("\0", 1, 0))
-    __ms1_printf[0] = "FAIL - `uart_putc` not called\0";
-  if (!__test_string("b", 1, 0))
-    __ms1_printf[1] = "FAIL - First character sent to `uart_putc` wrong value\0";
-  else if (!__test_string("basic", 5, 1))
-    __ms1_printf[1] = "FAIL - Characters sent to `uart_putc` differs from string\0";
+  assert(!status_is(TIMEOUT), general_t[1], "FAIL - Timeout occured when calling printf");
+}
 
-  // printf test 2
-  __ms_stdout_expects = 13;
-  __clear_string();
-  _ms_safe_call((void (*)(void))printf, "int: %d feet\n", 12);
-  if (_ms_recovery_status)
-    __ms1_printf[2] = "FAIL - Printed too many characters\0";
-  else if (!__test_string("int: 12 feet\n", 13, 1))
-    __ms1_printf[2] = "FAIL - Printed value doesn't match expected integer value\0";
+static void printf_tests(void) {
+  t__set_io("", -1, 5);
+  t__with_timeout(10, (void (*)(void))printf, "basic");
+  t__check_io(0, "basic");
+  
+  assert(t__uart_putc_called, printf_t[0], "FAIL - 'uart_putc' never called");
+  assert(status_is(STDOUT_MATCH), printf_t[1], "FAIL - Output text does not match template argument");
+  assert(status_is(STDOUT_COUNT), printf_t[1], "FAIL - Output text is not the correct length");
+  assert(!status_is(TIMEOUT), printf_t[1], "TIMEOUT -- printf did not return");
 
-  // printf test 3
-  __ms_stdout_expects = 19;
-  __clear_string();
-  _ms_safe_call((void (*)(void))printf, "hex: %x feet\n\n", 0x2ab30);
-  if (_ms_recovery_status) {
-    __ms1_printf[3] = "FAIL - Printed too many characters\0";
+  t__set_io("", -1, 13);
+  t__with_timeout(10, (void (*)(void))printf, "int: %d feet\n", 12);
+  t__check_io(0, "int: 12 feet\n");
+
+  assert(status_is(STDOUT_MATCH), printf_t[2], "FAIL - Decimal template text does not match the expected value");
+  assert(status_is(STDOUT_COUNT), printf_t[2], "FAIL - Decimal template text is not the correct length");
+  assert(!status_is(TIMEOUT), printf_t[2], "TIMEOUT -- printf did not return");
+
+  t__set_io("", -1, 19);
+  t__with_timeout(10, (void (*)(void))printf, "hex: %x feet\n\n", 0x2ab30);
+  t__check_io(0, "hex: 0x2ab30 feet\n\n");
+
+  assert(status_is(STDOUT_MATCH), printf_t[3], "FAIL - Hexadecimal template text does not match the expected value");
+  assert(status_is(STDOUT_COUNT), printf_t[3], "FAIL - Hexadecimal template text is not the correct length");
+  assert(!status_is(TIMEOUT), printf_t[2], "TIMEOUT -- printf did not return");
+}
+
+static void initialize_tests(void) {
+  char test_text[5][256];
+  char* ptr;
+  for (int i=0; i<5; i++)
+    for (int j=0; j<256; j++) test_text[i][j] = '\0';
+  ptr = t__strcpy(test_text[0], "Kernel start: 0x");
+  ptr = t__hexcpy(ptr, (unsigned long)text_start);
+  ptr = t__strcpy(ptr, "\n");
+  
+  ptr = t__strcpy(test_text[1], "--Kernel size: ");
+  ptr = t__intcpy(ptr, (unsigned long)(data_start - text_start));
+  ptr = t__strcpy(ptr, "\n");
+  
+  ptr = t__strcpy(test_text[2], "Globals start: 0x");
+  ptr = t__hexcpy(ptr, (unsigned long)data_start);
+  ptr = t__strcpy(ptr, "\n");
+  
+  ptr = t__strcpy(test_text[3], "Heap/Stack start: 0x");
+  ptr = t__hexcpy(ptr, (unsigned long)mem_start);
+  ptr = t__strcpy(ptr, "\n");
+  
+  ptr = t__strcpy(test_text[4], "--Free Memory Available: ");
+  ptr = t__intcpy(ptr, (unsigned long)(mem_end - mem_start));
+  ptr = t__strcpy(ptr, "\n");
+
+  t__set_io("", -1, 1000);
+  t__with_timeout(10, (void (*)(void))__real_initialize);
+
+  char* lines[5], *stdout=t__raw_stdout();
+  uint32 idx = 0;
+  lines[idx++] = &(stdout[0]);
+  for (int i=0; stdout[i] != '\0' && idx < 5; i++)
+    if (stdout[i] == '\n')
+      lines[idx++] = &(stdout[i+1]);
+  
+  assert(same_line(test_text[0], lines[0]), init_t[0], "FAIL - Kernel start line does not match expected value");
+  assert(same_line(test_text[1], lines[1]), init_t[1], "FAIL - Kernel size line does not match expected value");
+  assert(same_line(test_text[2], lines[2]), init_t[2], "FAIL - Globals line does not match expected value");
+  assert(same_line(test_text[3], lines[3]), init_t[3], "FAIL - Memory line does not match expected value");
+  assert(same_line(test_text[4], lines[4]), init_t[4], "FAIL - Total Memory size line does not match expected value");
+}
+
+void t__ms1(uint32 idx) {
+  if (idx == 0) {
+    t__print("\n");
+    init_tests(general_t, test_count(general_prompt));
+    t__runner("general", test_count(general_prompt), general_tests);
   }
-  else if (!__test_string("hex: 0x2ab30 feet\n\n", 19, 0)) {
-    if (!__test_string("hex: 2ab30 feet\n\n", 17, 0)) {
-      if (!__test_string("hex: 2ab30 feet\n", 16, 0) && !__test_string("hex: 0x2ab30 feet\n", 18, 0)) {
-	__ms1_printf[3] = "FAIL - Printed value doesn't match expected hexidecimal value\0";
-      }
-      else {
-	__ms1_printf[3] = "FAIL - Did not print extra newline characters\0";
-      }
-    }
-    else {
-      __ms1_printf[3] = "FAIL - Missing '0x' in front of hex value\0";
-    }
+  else if (idx == 1) {
+    init_tests(printf_t, test_count(printf_prompt));
+    t__runner("printf", test_count(printf_prompt), printf_tests);
   }
-
-  _psudoprint("\nGeneral Tests:\0");
-  for (int i=0; i<2; i++) {
-    _psudoprint(__ms1_general_tests[i]);
-    _psudoprint(__ms1_general[i]);
+  else if (idx == 2) {
+    init_tests(init_t, test_count(init_prompt));
+    t__runner("initialization", test_count(init_prompt), initialize_tests);
   }
-  _psudoprint("\n\nPrintf Tests:\0");
-  for (int i=0; i<4; i++) {
-    _psudoprint(__ms1_printf_tests[i]);
-    _psudoprint(__ms1_printf[i]);
+  else {
+    t__print("\n----------------------------\n");
+    t__printer("\nGeneral Tests:", general_t, general_prompt, test_count(general_prompt));
+    t__printer("\nPrintf Tests:", printf_t, printf_prompt, test_count(printf_prompt));
+    t__printer("\nInitialize Tests:", init_t, init_prompt, test_count(init_prompt));
+    t__print("\n");
   }
-
-  //  Init tests
-  _psudoprint("\n\nInitialize tests:\0");
-  _psudoprint("\n  * The following tests can fail by blocking and never print\n  * Less than 5 results should be considered a test failure\n\0");
-
-  __ms_stdout_search = '\n';
-  __ms_stdout_expects = 0;
-  __clear_string();
-  _ms_safe_call((void (*)(void))initialize);
-  if (!__test_string(init_text, 25, 1))
-    __ms1_init[0] = "FAIL - Kernel start line does not match expected value\0";
-
-  _psudoprint(__ms1_init_tests[0]);
-  _psudoprint(__ms1_init[0]);
-
-  __ms_stdout_search = '\n';
-  __ms_stdout_expects = 1;
-  __clear_string();
-  _ms_safe_call((void (*)(void))initialize);
-  if (!__test_string(init_text, 45, 1))
-    __ms1_init[1] = "FAIL - Kernel size line does not match expected value\0";
-  
-  _psudoprint(__ms1_init_tests[1]);
-  _psudoprint(__ms1_init[1]);
-  
-  __ms_stdout_search = '\n';
-  __ms_stdout_expects = 2;
-  __clear_string();
-  _ms_safe_call((void (*)(void))initialize);
-  if (!__test_string(init_text, 71, 1))
-    __ms1_init[2] = "FAIL - Globals line does not match expected value\0";
-  
-  _psudoprint(__ms1_init_tests[2]);
-  _psudoprint(__ms1_init[2]);
-
-  __ms_stdout_search = '\n';
-  __ms_stdout_expects = 3;
-  __clear_string();
-  _ms_safe_call((void (*)(void))initialize);
-  if (!__test_string(init_text, 100, 1))
-    __ms1_init[3] = "FAIL - Memory line does not match expected value\0";
-  
-  _psudoprint(__ms1_init_tests[3]);
-  _psudoprint(__ms1_init[3]);
-
-  __ms_stdout_search = '\n';
-  __ms_stdout_expects = 4;
-  __clear_string();
-  _ms_safe_call((void (*)(void))initialize);
-  if (!__test_string(init_text, 133, 1))
-    __ms1_init[4] = "FAIL - Total Memory size line does not match expected value\0";
-  
-  _psudoprint(__ms1_init_tests[4]);
-  _psudoprint(__ms1_init[4]);
-  
-  _psudoprint("\n\n");
 }

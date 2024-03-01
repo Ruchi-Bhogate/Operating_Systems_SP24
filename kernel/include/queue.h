@@ -17,6 +17,7 @@ typedef struct _queue
 
 extern queue_t thread_queue[];
 extern uint32 ready_list;
+extern uint32 sleep_list; /* added for milestone 5 */
 
 /*  thread related prototypes  */
 void thread_enqueue(uint32, uint32);

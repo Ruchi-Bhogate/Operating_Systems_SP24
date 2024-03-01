@@ -1,208 +1,183 @@
 #include <barelib.h>
 #include <bareio.h>
 
-char* __ms2_general[3];
-char* __ms2_echo[5];
-char* __ms2_hello[4];
-char* __ms2_shell[6];
+#define STDIN_COUNT 0x0
+#define STDOUT_COUNT 0x1
+#define STDOUT_MATCH 0x2
+#define TIMEOUT 0x5
+#define status_is(cond) (t__status & (0x1 << cond))
+#define test_count(x) sizeof(x) / sizeof(x[0])
+#define init_tests(x, c) for (int i=0; i<c; i++) x[i] = "OK"
+#define assert(test, ls, err) if (!(test)) ls = err
 
-extern char (*sys_putc_hook)(char);
-extern char (*sys_getc_hook)(void);
-extern void (*sys_syscall_hook)(void);
-extern char (*oldhook_in)(void);
-extern char (*oldhook_out)(char);
-extern int __ms_stdout_expects;
-extern int __ms_stdin_expects;
-extern int __ms_syscall_expects;
-extern int _ms_recovery_status;
-char putc_tester(char);
-char getc_tester(void);
-void syscall_tester(void);
-void _psudoprint(const char*);
-void _prep_stdin(const char*);
-void __clear_string(void);
-char __test_string(const char*, int, int);
+void  t__print(const char*);
+int   t__with_timeout(int32, void*, ...);
+void  t__set_io(const char* stdin, int32 stdin_c, int32 stdout_c);
+byte  t__check_io(uint32 count, const char* stdout);
+char* t__raw_stdout(void);
 
-int _ms_safe_call(void*, ...);
+extern uint32 t__hello_called;
+extern uint32 t__echo_called;
+extern uint32 t__status;
 
 char builtin_echo(char*);
 char builtin_hello(char*);
-char shell(char*);
+char __real_shell(char*);
 
-char* __ms2_general_tests[] = {
-		       "\n  Program Compiles:                         \0",
-		       "\n  `echo` is callable:                       \0",
-		       "\n  `hello` is callable:                      \0"
+void t__runner(const char* , uint32, void(*)(void));
+void t__printer(const char*, char**, const char**, uint32);
+
+
+static const char* general_prompt[] = {
+		       "  Program Compiles:                         ",
+		       "  `echo` is callable:                       ",
+		       "  `hello` is callable:                      "
 };
-char* __ms2_echo_tests[] = {
-		       "\n  Prints the argument text:                 \0",
-		       "\n  Echos a line of text:                     \0",
-		       "\n  Returns when encountering an empty line:  \0",
-		       "\n  Returns 0 when an argument is passed in:  \0",
-		       "\n  Returns the number of characters read:    \0"
+static const char* echo_prompt[] = {
+		       "  Prints the argument text:                 ",
+		       "  Echos a line of text:                     ",
+		       "  Returns when encountering an empty line:  ",
+		       "  Returns 0 when an argument is passed in:  ",
+		       "  Returns the number of characters read:    "
 };
-char* __ms2_hello_tests[] = {
-		       "\n  Prints error on no argument received:     \0",
-		       "\n  Echos the correct string:                 \0",
-		       "\n  Returns 1 on error:                       \0",
-		       "\n  Returns 0 on success:                     \0"
+static const char* hello_prompt[] = {
+		       "  Prints error on no argument received:     ",
+		       "  Prints the correct string:                ",
+		       "  Returns 1 on error:                       ",
+		       "  Returns 0 on success:                     "
 };
-char* __ms2_shell_tests[] = {
-		       "\n  Prints error on bad command:              \0",
-		       "\n  Reads only up to newline each command:    \0",
-		       "\n  Sucessfully calls `echo`:                 \0",
-		       "\n  Successfully calls `hello`:               \0",
-		       "\n  Shell loops after command completes:      \0",
-		       "\n  Shell replaces '$?' with previous result: \0"
+static const char* shell_prompt[] = {
+		       "  Prints error on bad command:              ",
+		       "  Reads only up to newline each command:    ",
+		       "  Sucessfully calls `echo`:                 ",
+		       "  Successfully calls `hello`:               ",
+		       "  Shell loops after command completes:      ",
+		       "  Shell replaces '$?' with previous result: "
 };
 
-void __ms2(void) {
-  int result;
-  uart_init();
-  oldhook_out = sys_putc_hook;
-  oldhook_in = sys_getc_hook;
-  __clear_string();
-  sys_putc_hook = putc_tester;
-  sys_getc_hook = getc_tester;
-  sys_syscall_hook = syscall_tester;
-  __ms_syscall_expects = 0;
+static char* general_t[test_count(general_prompt)];
+static char* echo_t[test_count(echo_prompt)];
+static char* hello_t[test_count(echo_prompt)];
+static char* shell_t[test_count(shell_prompt)];
 
-  for (int i=0; i<3; i++) __ms2_general[i] = "OK\0";
-  for (int i=0; i<5; i++) __ms2_echo[i]    = "OK\0";
-  for (int i=0; i<4; i++) __ms2_hello[i]   = "OK\0";
-  for (int i=0; i<6; i++) __ms2_shell[i]   = "OK\0";
-
-  _psudoprint("\n  * Expected test count: 18\n  * Less than 18 results should be considered a test failure\n\0");
-
-  // Echo test 1
-  __ms_stdout_expects = 10;
-  __clear_string();
-  result = (int)_ms_safe_call((void (*)(void))builtin_echo, "echo Echo test\0");
-  if (_ms_recovery_status) {
-    __ms2_general[1] = "FAIL - Function did not return\0";
-    __ms2_echo[0] = "FAIL - 'uart_putc' Called too many times\0";
-  }
-  else if (!__test_string("Echo test\n", 10, 1))
-    __ms2_echo[0] = "FAIL - Output text is not the same as text passed in\0";
-  if (result)
-    __ms2_echo[3] = "FAIL - Returned non-0 value\0";
-
-  // Echo test 2
-  __ms_stdout_expects = 17;
-  __ms_stdin_expects = 17;
-  __clear_string();
-  _prep_stdin("Echo this string\n\0");
-  result = (int)_ms_safe_call((void (*)(void))builtin_echo, "echo\0");
-  if (!__test_string("Echo this string\n", 17, 1))
-    __ms2_echo[1] = "FAIL - Echoed text does not match expected input text\0";
-
-  // Echo test 3
-  __ms_stdout_expects = 17;
-  __ms_stdin_expects = 18;
-  __clear_string();
-  _prep_stdin("differenter text\n\n\0");
-  result = (int)_ms_safe_call((void (*)(void))builtin_echo, "echo\0");
-  if (_ms_recovery_status) {
-    __ms_stdout_expects = 18;
-    __ms_stdin_expects = 18;
-    __clear_string();
-    _prep_stdin("differenter text\n\n\0");
-    (int)_ms_safe_call((void (*)(void))builtin_echo, "echo\0");
-    if(_ms_recovery_status)
-      __ms2_echo[2] = "FAIL - Function did not return on an empty line\0";
-    else
-      __ms2_echo[2] = "FAIL - Function prints final newline character (should return only)\0";
-  }
-  if (result != 16)
-    __ms2_echo[4] = "FAIL - Function returned a different character count than expected\0";
+static void general_tests(void) {
+  t__set_io("", -1, 20);
+  t__with_timeout(10, (void (*)(void))builtin_echo, "echo stuff");
   
-  // Hello test 1
-  __ms_stdout_expects = 21;
-  __clear_string();
-  result = (int)_ms_safe_call((void (*)(void))builtin_hello, "hello");
-  if (_ms_recovery_status) {
-    __ms2_general[2] = "FAIL - function did not return\0";
-    __ms2_hello[0] = "FAIL - 'uart_putc' Called too many times\0";
-  }
-  else if (!__test_string("Error - bad argument\n", 21, 1))
-    __ms2_hello[0] = "FAIL - Error message does not match expected text\0";
-  if (result != 1)
-    __ms2_hello[2] = "FAIL - Error code not returned when no argument given\0";
+  assert(!status_is(TIMEOUT), general_t[1], "FAIL - Timeout occured when calling 'builtin_echo'");
 
-  // Hello test 2
-  __ms_stdout_expects = 17;
-  __clear_string();
-  result = (int)_ms_safe_call((void (*)(void))builtin_hello, "hello username");
+  t__set_io("", -1, 20);
+  t__with_timeout(10, (void (*)(void))builtin_hello, "hello stuff");
+
+  assert(!status_is(TIMEOUT), general_t[2], "FAIL - Timeout occured when calling 'builtin_hello'");
+}
+
+static void echo_tests(void) {
+  byte result;
+  t__set_io("", -1, 10);
+  result = t__with_timeout(10, (void (*)(void))builtin_echo, "echo Echo test");
+  t__check_io(0, "Echo test\n");
+
+  assert(status_is(STDOUT_MATCH), echo_t[0], "FAIL - Printed text does not match expected output");
+  assert(status_is(STDOUT_COUNT), echo_t[0], "FAIL - Output text is not the expected length");
+  assert(result == 0, echo_t[3], "FAIL - Returned non-zero value");
+  assert(!status_is(TIMEOUT), echo_t[0], "TIMEOUT -- 'builtin_echo' never returned");
+  assert(!status_is(TIMEOUT), echo_t[3], "TIMEOUT -- 'builtin_echo' never returned");
+
+  t__set_io("Echo this string\n", 18, 17);
+  result = t__with_timeout(10, (void (*)(void))builtin_echo, "echo");
+  t__check_io(17, "Echo this string\n");
+
+  assert(status_is(STDOUT_MATCH), echo_t[1], "FAIL - Did not print line text from stdin");
+
+  t__set_io("differenter text\n\n", -1, 40);
+  t__with_timeout(10, (void (*)(void))builtin_echo, "echo");
+
+  assert(!status_is(TIMEOUT), echo_t[2], "TIMEOUT -- 'builtin_echo' never returned after empty newline");
+
+  t__set_io("differenter text\n\n", -1, 40);
+  result = t__with_timeout(10, (void (*)(void))builtin_echo, "echo");
+
+  assert(result == 16, echo_t[3], "FAIL - Did not return the correct count");
+  assert(!status_is(TIMEOUT), echo_t[3], "TIMEOUT -- 'builtin_echo' never returned");
+}
+
+static void hello_tests(void) {
+  byte result;
+  t__set_io("", -1, 21);
+  result = t__with_timeout(10, (void (*)(void))builtin_hello, "hello");
+  t__check_io(0, "Error - bad argument\n");
   
-  if (_ms_recovery_status) {
-    __ms2_general[2] = "FAIL - function did not return\0";
-    __ms2_hello[1] = "FAIL - 'uart_putc' Called too many times\0";
-  }
-  else if (!__test_string("Hello, username!\n", 17, 1))
-    __ms2_hello[1] = "FAIL - Message does not match expected text\0";
-  if (result)
-    __ms2_hello[3] = "FAIL - Non-0 value returned\0";
+  assert(status_is(STDOUT_MATCH), hello_t[0], "FAIL - Text did not match the expected error");
+  assert(status_is(STDOUT_COUNT), hello_t[0], "FAIL - Error text not the correct length");
+  assert(result == 1, hello_t[2], "FAIL - Return value was not 1 on error");
+  assert(!status_is(TIMEOUT), hello_t[0], "TIMEOUT -- 'builtin_hello' did not return");
+  assert(!status_is(TIMEOUT), hello_t[2], "TIMEOUT -- 'builtin_hello' did not return");
 
-  // Shell test 1
-  __ms_stdout_expects = 23;
-  __ms_stdin_expects = 8;
-  __clear_string();
-  _prep_stdin("badcall\n\0");
-  result = (int)_ms_safe_call((void (*)(void))shell, "\0");
-  if (_ms_recovery_status == 2)
-    __ms2_shell[1] = "FAIL - Reads from `uart_getc` after receiving '\n' character\0";
-  else if (!__test_string("bareOS$ Unknown command\n\0", 24, 1))
-    __ms2_shell[0] = "FAIL - Error message does not match expected text\0";
+  t__set_io("", -1, 17);
+  result = t__with_timeout(10, (void (*)(void))builtin_hello, "hello username");
+  t__check_io(0, "Hello, username!\n");
 
+  assert(status_is(STDOUT_MATCH), hello_t[1], "FAIL - Text did not match the expected output");
+  assert(status_is(STDOUT_COUNT), hello_t[1], "FAIL - Output text was not the expected length");
+  assert(result == 0, hello_t[3], "FAIL - Return value was non-zero on success");
+  assert(!status_is(TIMEOUT), hello_t[1], "TIMEOUT -- 'builtin_hello' did not return");
+  assert(!status_is(TIMEOUT), hello_t[3], "TIMEOUT -- 'builtin_hello' did not return");
+}
 
-  // Shell test 2
-  __ms_stdout_expects = 22;
-  __ms_stdin_expects = 12;
-  __clear_string();
-  _prep_stdin("hello value\n\0");
-  result = (int)_ms_safe_call((void (*)(void))shell, "\0");
-  if (!__test_string("bareOS$ Hello, value!\n\0", 22, 1))
-    __ms2_shell[3] = "FAIL - `hello` not called or printed value incorrect\0";
+static void shell_tests(void) {
+  t__set_io("badcall\n", 9, 32);
+  t__with_timeout(10, (void (*)(void))__real_shell, "");
+  t__check_io(9, "bareOS$ Unknown command\nbareOS$ ");
 
-  // Shell test 3
-  __ms_stdout_expects = 15;
-  __ms_stdin_expects = 12;
-  __clear_string();
-  _prep_stdin("echo foobar\n\0");
-  result = (int)_ms_safe_call((void (*)(void))shell, "\0");
-  if (!__test_string("bareOS$ foobar\n\0", 15, 1))
-    __ms2_shell[2] = "FAIL - `echo` not called or printed value incorrect\0";
-  
-  // Shell test 4
-  __ms_stdout_expects = 39;
-  __ms_stdin_expects = 14;
-  __clear_string();
-  _prep_stdin("hello\necho $?\n\0");
-  result = (int)_ms_safe_call((void (*)(void))shell, "\0");
-  if (_ms_recovery_status != 1)
-    __ms2_shell[4] = "FAIL - `shell` did not loop\n\0";
-  if (!__test_string("bareOS$ Error - bad argument\nbareOS$ 1\n\0", 39, 1))
-    __ms2_shell[5] = "FAIL - Return substitution failed\0";
+  assert(status_is(STDOUT_MATCH), shell_t[0], "FAIL - Error text did not match expected value");
+  assert(status_is(STDOUT_COUNT), shell_t[0], "FAIL - Error text was not the expected length");
+  assert(status_is(STDIN_COUNT), shell_t[1], "FAIL - Reads from `uart_getc` after '\\n' character");
 
-  _psudoprint("\nGeneral Tests:\0");
-  for (int i=0; i<3; i++) {
-    _psudoprint(__ms2_general_tests[i]);
-    _psudoprint(__ms2_general[i]);
+  t__set_io("echo foobar\n", 13, 15);
+  t__echo_called = 0;
+  t__with_timeout(10, (void (*)(void))__real_shell, "");
+  assert(t__echo_called, shell_t[2], "FAIL - hello not called from shell on 'hello'");
+
+  t__set_io("hello value\n", 13, 23);
+  t__hello_called = 0;
+  t__with_timeout(10, (void (*)(void))__real_shell, "");
+
+  assert(t__hello_called, shell_t[3], "FAIL - hello not called from shell on 'hello'");
+
+  t__set_io("hello\necho $?\n", 15, 47);
+  t__with_timeout(10, (void (*)(void))__real_shell, "");
+  t__check_io(15, "bareOS$ Error - bad argument\nbareOS$ 1\nbareOS$ ");
+
+  char* stdout = t__raw_stdout();
+  assert(status_is(STDOUT_COUNT), shell_t[4], "FAIL - Shell did not loop after function");
+  assert(stdout[37] == '1', shell_t[5], "FAIL - '$?' not replaced with previous return value");
+}
+
+void t__ms2(uint32 idx) {
+  if (idx == 0) {
+    t__print("\n");
+    init_tests(general_t, test_count(general_prompt));
+    t__runner("general", test_count(general_prompt), general_tests);
   }
-  _psudoprint("\n\nEcho Tests:\0");
-  for (int i=0; i<5; i++) {
-    _psudoprint(__ms2_echo_tests[i]);
-    _psudoprint(__ms2_echo[i]);
+  else if (idx == 1) {
+    init_tests(echo_t, test_count(echo_prompt));
+    t__runner("echo", test_count(echo_prompt), echo_tests);
   }
-  _psudoprint("\n\nHello Tests:\0");
-  for (int i=0; i<4; i++) {
-    _psudoprint(__ms2_hello_tests[i]);
-    _psudoprint(__ms2_hello[i]);
+  else if (idx == 2) {
+    init_tests(hello_t, test_count(hello_prompt));
+    t__runner("hello", test_count(hello_prompt), hello_tests);
   }
-  _psudoprint("\n\nShell Tests:\0");
-  for (int i=0; i<6; i++) {
-    _psudoprint(__ms2_shell_tests[i]);
-    _psudoprint(__ms2_shell[i]);
+  else if (idx == 3) {
+    init_tests(shell_t, test_count(shell_prompt));
+    t__runner("shell", test_count(shell_prompt), shell_tests);
   }
-  _psudoprint("\n\n");
+  else {
+    t__print("\n----------------------------\n");
+    t__printer("\nGeneral Tests:", general_t, general_prompt, test_count(general_prompt));
+    t__printer("\nEcho Tests:", echo_t, echo_prompt, test_count(echo_prompt));
+    t__printer("\nHello Tests:", hello_t, hello_prompt, test_count(hello_prompt));
+    t__printer("\nShell Tests:", shell_t, shell_prompt, test_count(shell_prompt));
+    t__print("\n");
+  }
 }

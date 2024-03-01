@@ -1,19 +1,34 @@
-	.globl 	_ms_recovery_status
+	.file "msutil.s"
+	.option arch, +zicsr
 	.equ REGSZ, 8
+	.equ TIMEOUT, 0x5
 
-_ms_recovery_space:
+recovery_space:
 	.dword 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-_ms_recovery_status:
+
+	.globl 	t__status
+t__status:
 	.word 0
 
-	.globl 	_ms_recover
-_ms_recover:
-	sw	a0,_ms_recovery_status,t1   # -. Set the status global to `1` and long jumps to the termination of `_ms_safe_call`
-	j 	_ms_rcv_ptr                 # -'
+	.globl t__timeout
+t__timeout:
+	.word -1
 
-	.globl _ms_safe_call
-_ms_safe_call:
-	la 	t0,_ms_recovery_space
+	.globl t__break
+t__break:
+	la	t0,rcv_ptr
+	csrw	mepc,t0
+	mret
+
+	.globl t__reset
+t__reset:
+	la sp, _mmap_kstack_top
+	call t__run
+	j    __noop
+	
+	.globl t__with_timeout
+t__with_timeout:
+	la 	t0,recovery_space
 	sd	ra,0*REGSZ(t0)
 	sd	s0,1*REGSZ(t0)
 	sd 	s1,2*REGSZ(t0)
@@ -37,23 +52,33 @@ _ms_safe_call:
 	sd	a7,20*REGSZ(t0)
 	sd 	sp,21*REGSZ(t0)
 
-	addi    t0,a0,0     # --
-	addi	a0,a1,0     #  |
-	addi 	a1,a2,0     #  |
-	addi	a2,a3,0     #  |  Shift arguments into position for the protected call
-	addi	a3,a4,0     #  |
-	addi	a4,a5,0     #  |
-	addi	a5,a6,0     #  |
-	addi 	a6,a7,0     # --
+	li      t0,0x0
+	sw      t0,t__status,t1
+	sw      a0,t__timeout,t1 # --
+	addi    t0,a1,0          #  |
+	addi	a0,a2,0          #  |
+	addi 	a1,a3,0          #  |
+	addi	a2,a4,0          #  |  Shift arguments into position for the protected call
+	addi	a3,a5,0          #  |
+	addi	a4,a6,0          #  |
+	addi	a5,a7,0          # --
 
-	li	t1, 0x0                    # --
-	sw	t1,_ms_recovery_status,t2  #  |  Call the protected function and jump to `__ms_complete_recover` when done
-	jalr 	t0                         #  |
-	j	 __ms_complete_recover     # --
-_ms_rcv_ptr:
+	li	t1, 0x0            # --
+	sw	t1,t__status,t2    #  |  Call the protected function and jump to `__ms_complete_recover` when done
+	jalr 	t0                 #  |
+	j	complete_recovery  # --
+rcv_ptr:
 	addi 	a0,zero,-1            # -- Fix stack pointer after long jump
-__ms_complete_recover:
-	la	t0,_ms_recovery_space
+complete_recovery:
+	lw      t1,t__timeout
+	slti    t1,t1,0x0
+	slli    t1,t1,TIMEOUT
+	lw      t0,t__status
+	or      t0,t0,t1
+	sw      t0,t__status,t1
+	li      t0, 0xFFFF
+	sw      t0,t__timeout,t1
+	la	t0,recovery_space
 	ld	ra,0*REGSZ(t0)
 	ld	s0,1*REGSZ(t0)
 	ld 	s1,2*REGSZ(t0)

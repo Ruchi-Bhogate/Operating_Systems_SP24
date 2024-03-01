@@ -1,7 +1,7 @@
 #include <barelib.h>
 #include <thread.h>
 #include <queue.h>
-// #include <syscall.h>
+//#include <syscall.h>
 
 /*  'resched' places the current running thread into the ready state  *
  *  and  places it onto  the tail of the  ready queue.  Then it gets  *

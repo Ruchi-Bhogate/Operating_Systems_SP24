@@ -1,6 +1,6 @@
-GPORT=9988
+GPORT=$(shell python3 -c "import random; print(random.Random(\"$$USER\").randint(5570, 7000));")
+#GPORT=                  # Generate a random port based on the current username, uncomment this line to switch to static port
 IMG=bareOS.img
-
 ARCH=riscv64-unknown-linux-gnu
 CC=$(ARCH)-gcc
 LD=$(ARCH)-ld
@@ -11,30 +11,35 @@ QEMU=qemu-system-riscv64
 IDIR=kernel/include
 TDIR=kernel/testing
 BDIR=.build
-IODIR=io
 MAP=$(BDIR)/kernel.map
-ENV=.env
+ENV=.msfile
+milestone?=$(shell cat $(ENV) 2>/dev/null)
+milestone_imp=$(shell cat $(ENV) 2>/dev/null)
 
 SRC=$(wildcard kernel/*/*.c)
 ASM=$(wildcard kernel/*/*.s) $(wildcard kernel/*/*.S)
 OBJ=$(patsubst %.c,$(BDIR)/%.o,$(notdir $(SRC))) $(patsubst %.s,$(BDIR)/%_asm.o,$(patsubst %.S,$(BDIR)/%_asm.o,$(notdir $(ASM))))
-OBJ_TEST=$(patsubst %.c,$(BDIR)/%.o,$(notdir $(wildcard $(TDIR)/*.c)))
+OBJ_TEST=$(patsubst %.c,$(BDIR)/%.o,$(notdir $(wildcard $(TDIR)/*.c))) \
+         $(patsubst %.s,$(BDIR)/%_asm.o,$(notdir $(wildcard $(TDIR)/*.s)))
 OBJ_LINK=$(filter-out $(OBJ_TEST),$(OBJ))
 VPATH=$(dir $(ASM)) $(dir $(SRC))
 
-CFLAGS=-Wall -Werror -fno-builtin -nostdlib -march=rv64imac -mabi=lp64 -mcmodel=medany -I $(IDIR) -O0 -g -imacros $(ENV)
+CFLAGS=-Wall -Werror -fno-builtin -nostdlib -march=rv64imac -mabi=lp64 -mcmodel=medany -I $(IDIR) -O0 -g -D MILESTONE=$(milestone) -D MILESTONE_IMP=$(milestone_imp)
 SFLAGS= -I $(IDIR) -march=rv64imac -mabi=lp64 -g
 DFLAGS= -ex "file $(IMG)" -ex "target remote :$(GPORT)"
 EFLAGS= -E -march=rv64imac -mabi=lp64
 LDFLAGS=-nostdlib -Map $(MAP)
-QFLAGS=-M virt -kernel $(IMG) -bios none -chardev stdio,id=uart0 -serial chardev:uart0 -display none
-
+QFLAGS=-M virt -kernel $(IMG) -bios none -chardev stdio,id=uart0,logfile=.log -serial chardev:uart0 -display none
+INJ_FN=shell handle_clk ctxload disable_interrupts restore_interrupts initialize resched create_thread resume_thread join_thread uart_putc uart_getc builtin_hello builtin_echo
 
 STAGE=.setup
 
 .PHONY: all clean qemu qemu-debug gdb dirs pack
 
 all: dirs $(OBJ) $(BDIR)/kernel.elf $(IMG)
+
+
+# ----------------------  Build OS Image  ----------------------------
 
 $(IMG): $(BDIR)/kernel.elf
 	$(OBJCOPY) $(BDIR)/kernel.elf -I binary $(IMG)
@@ -51,19 +56,8 @@ $(BDIR)/%_asm.o: %.s
 $(BDIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-dirs: 
-	@mkdir -p kernel/lib
-	@mkdir -p kernel/app
-	@mkdir -p kernel/testing
-	@mkdir -p $(BDIR)
-	@mkdir -p $(IODIR)
-	@touch $(IODIR)/p8.in
-	@touch $(IODIR)/p8.out
 
-clean:
-	rm -f bareOS.tar.gz
-	rm -f $(IODIR)/p8.in $(IODIR)/p8.out
-	rm -rf $(BDIR) bareOS.img
+# ----------------------  Virtualization  ----------------------------
 
 qemu: dirs
 ifneq ("$(wildcard $(BDIR)/.force)","")
@@ -74,78 +68,82 @@ endif
 .qemu: all
 	$(QEMU) $(QFLAGS)
 
+
+# --------------------  Environment Management  ----------------------
+
+dirs: 
+	@mkdir -p kernel/lib
+	@mkdir -p kernel/app
+	@mkdir -p kernel/testing
+	@mkdir -p $(BDIR)
+
+pack:
+	rm -f bareOS.tar.gz
+	tar -czvf bareOS.tar.gz kernel
+
+clean:
+	rm -f bareOS.tar.gz
+	rm -rf $(BDIR) bareOS.img
+
+checkout: dirs
+	@echo -e Checking out milestone $(milestone)...
+	@echo
+	@cd $(STAGE) && \
+		for dir in lib app system include device testing; do \
+			for file in *; do if [ "$$file" != "$${file#milestone-$(milestone)-$$dir-}" ]; then echo "  Creating kernel/$$dir/$${file#milestone-$(milestone)-$$dir-}"; cp -i "$$file" ../kernel/$$dir/$${file#milestone-$(milestone)-$$dir-}; fi done \
+		done
+	@echo $(milestone) > $(ENV)
+	@echo
+	@echo Checkout complete
+
+# The following is depreciated and should be removed next semester
+milestone-%:
+	$(MAKE) checkout milestone=$(patsubst milestone-%,%,$@)
+
+
+# ------------------------  Debugging  -------------------------------
+
 qemu-debug: QFLAGS += -S -gdb tcp::${GPORT}
 qemu-debug: .qemu
 
 gdb:
 	$(GDB) $(DFLAGS)
 
-milestone-%: dirs
-	@echo -e Building $@...
-	@echo
-	@cd $(STAGE) && \
-		for dir in lib app system include device testing; do \
-			for file in *; do if [ "$$file" != "$${file#$@-$$dir-}" ]; then echo "  Creating kernel/$$dir/$${file#$@-$$dir-}"; cp -i "$$file" ../kernel/$$dir/$${file#$@-$$dir-}; fi done \
-		done
-	@echo "#define MILESTONE $(patsubst milestone-%,%,$@)" > $(ENV)
-	@echo
-	@echo Build complete
-
-test: LDFLAGS += --wrap=shell --wrap=handle_clk --wrap=initialize --wrap=resched
+test: LDFLAGS += $(addprefix --wrap=,$(INJ_FN))
 test: OBJ_LINK += $(OBJ_TEST)
 test: clean dirs all
 	touch $(BDIR)/.force
 	$(MAKE) .qemu
 
-test-milestone-1: EFLAGS += -D BS_ENTRY_FUNC=__ms1
-test-milestone-1: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+# The following are depreciated and should be removed next semester
+test-milestone-1: milestone=1
+test-milestone-1: test
 
-test-milestone-2: EFLAGS += -D BS_ENTRY_FUNC=__ms2
-test-milestone-2: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-2: milestone=2
+test-milestone-2: test
 
-test-milestone-3: EFLAGS += -D BS_ENTRY_FUNC=__ms3
-test-milestone-3: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-3: milestone=3
+test-milestone-3: test
 
+test-milestone-4: milestone=4
 test-milestone-4: test
 
-test-milestone-5: EFLAGS += -D BS_ENTRY_FUNC=__ms5
-test-milestone-5: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-5: milestone=5
+test-milestone-5: test
 
-test-milestone-6: EFLAGS += -D BS_ENTRY_FUNC=__ms6
-test-milestone-6: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-6: milestone=6
+test-milestone-6: test
 
-test-milestone-7: EFLAGS += -D BS_ENTRY_FUNC=__ms7
-test-milestone-7: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-7: milestone=7
+test-milestone-7: test
 
-test-milestone-8: EFLAGS += -D BS_ENTRY_FUNC=__ms8
-test-milestone-8: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-8: milestone=8
+test-milestone-8: test
 
-test-milestone-9: EFLAGS += -D BS_ENTRY_FUNC=__ms9
-test-milestone-9: clean dirs all
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
+test-milestone-9: milestone=9
+test-milestone-9: test
 
-test-milestone-10: EFLAGS += -D BS_ENTRY_FUNC=__ms10
-test-milestone-10: clean .qemu
-	touch $(BDIR)/.force
-	$(MAKE) .qemu
-
-pack:
-	rm -f bareOS.tar.gz
-	tar -czvf bareOS.tar.gz kernel
+test-milestone-10: milestone=10
+test-milestone-10: test
 
 FORCE:
