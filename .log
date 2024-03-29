@@ -1,12 +1,26 @@
-Kernel start: 0x80000000
---Kernel size: 2048
-Globals start: 0x80002000
-Heap/Stack start: 0x8000bb98
---Free Memory Available: 33542425
-bareOS$ hello world
-Hello, world!
-bareOS$ ecg
-Unknown command
-bareOS$ echo world
-world
-bareOS$ 
+
+Running [2] general tests... DONE
+Running [6] malloc tests... DONE
+Running [5] free tests... DONE
+
+----------------------------
+
+General Tests:
+  Program Compiles:              OK
+  Heap initialized during boot:  OK
+
+Malloc Tests:
+  First small allocation correct:        OK
+  Second small allocation correct:       OK
+  Too big returns NULL:                  OK
+  Completely fill heap:                  OK
+  New block between allocations (small): OK
+  New block between allocations (fit):   OK
+
+Free Tests:
+  Free last block:     FAIL - Newly freed block not linked to free list
+  Free middle block:   FAIL - Newly freed block not linked to free list
+  Coalesce down:       FAIL - Did not coalesce free blocks
+  Coalesce up:         FAIL - Freed block did not coalesce up
+  Free first:          FAIL - Freed block was not coalesced into free list
+

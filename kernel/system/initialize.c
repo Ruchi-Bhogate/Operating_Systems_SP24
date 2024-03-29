@@ -4,6 +4,7 @@
 #include <shell.h>
 #include <thread.h>
 #include <queue.h>
+#include <malloc.h>
 /*
  *  This file contains the C code entry point executed by the kernel.
  *  It is called by the bootstrap sequence once the hardware is configured.
@@ -46,6 +47,9 @@ void initialize(void)
     thread_queue[i].qprev = i;
     thread_queue[i].qnext = i;
   }
+
+  // Initializing heap??
+  heap_init();
 
   restore_interrupts(mask);
   boot_complete = 1;
