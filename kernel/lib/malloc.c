@@ -54,6 +54,7 @@ void* malloc(uint64 size) {
   else{
     freelist = curr->next;
   }
+
   curr->state = M_USED;
   curr->next = NULL;
 
@@ -76,7 +77,7 @@ alloc_t* merge(alloc_t* addr, alloc_t* to_addr){
  *  allocation, coallesce the adjacent free blocks into   *
  *  one larger free block.                                */
 void free(void* addr) {
-  alloc_t* header_block = addr - 1;//(alloc_t*)addr - sizeof(alloc_t);
+  alloc_t* header_block = ((alloc_t*)addr - 1);//alloc_t* header_block = addr - 1;//(alloc_t*)addr - sizeof(alloc_t);
   header_block->state = M_FREE;
   alloc_t* curr = freelist;
 
@@ -87,7 +88,8 @@ void free(void* addr) {
     merge(header_block,freelist);
     return;
   }
-  while(!(curr < header_block && (curr->next == NULL || curr->next > header_block))){
+
+  while( !(curr < header_block) || (curr->next != NULL && curr->next <= header_block)){
     curr = curr->next;
   }
   header_block->next = curr->next;

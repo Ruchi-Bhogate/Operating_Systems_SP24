@@ -18,9 +18,9 @@ Malloc Tests:
   New block between allocations (fit):   OK
 
 Free Tests:
-  Free last block:     FAIL - Newly freed block not linked to free list
-  Free middle block:   FAIL - Newly freed block not linked to free list
-  Coalesce down:       FAIL - Did not coalesce free blocks
-  Coalesce up:         FAIL - Freed block did not coalesce up
-  Free first:          FAIL - Freed block was not coalesced into free list
+  Free last block:     OK
+  Free middle block:   OK
+  Coalesce down:       OK
+  Coalesce up:         OK
+  Free first:          OK
 
