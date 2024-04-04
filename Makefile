@@ -30,7 +30,7 @@ DFLAGS= -ex "file $(IMG)" -ex "target remote :$(GPORT)"
 EFLAGS= -E -march=rv64imac -mabi=lp64
 LDFLAGS=-nostdlib -Map $(MAP)
 QFLAGS=-M virt -kernel $(IMG) -bios none -chardev stdio,id=uart0,logfile=.log -serial chardev:uart0 -display none
-INJ_FN=shell handle_clk ctxload disable_interrupts restore_interrupts initialize resched create_thread resume_thread join_thread uart_putc uart_getc builtin_hello builtin_echo
+INJ_FN=shell handle_clk uart_handler ctxload disable_interrupts restore_interrupts initialize resched create_thread resume_thread join_thread uart_putc uart_getc builtin_hello builtin_echo tty_init sem_wait sem_post
 
 STAGE=.setup
 

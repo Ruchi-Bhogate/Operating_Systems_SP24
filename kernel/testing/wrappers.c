@@ -1,5 +1,7 @@
 #include <barelib.h>
+#if MILESTONE >= 3
 #include <thread.h>
+#endif
 
 #define IO_LEN 1024
 #define validate(x) (x[1] == -1 || x[0] == x[1])
@@ -36,6 +38,7 @@ void t__ms7(uint32);
 #endif
 #if MILESTONE_IMP > 7
 void t__ms8(uint32);
+void t__ms8_setup(void);
 #endif
 #if MILESTONE_IMP > 8
 void t__ms9(uint32);
@@ -98,6 +101,39 @@ byte t__check_io(uint32 stdin_c, const char* stdout) {
   return t__status;
 }
 
+byte t__wait_called = 0;
+byte t__block_wait = 0;
+int32 __wrap_sem_wait(uint32 sid) {
+  t__wait_called += 1;
+  while (t__block_wait);
+  return 0;
+}
+
+byte t__post_called = 0;
+int32 __wrap_sem_post(uint32 sid) {
+  t__post_called += 1;
+  return 0;
+}
+
+byte t__tty_init_called = 0;
+void __wrap_tty_init(void) {
+  t__tty_init_called += 1;
+  return;
+}
+
+
+byte t__enable_uart = 1;
+byte t__uart_interrupts = 0;
+extern volatile byte* uart;
+void set_uart_interrupt(uint32);
+void __real_uart_handler(void);
+void __wrap_uart_handler(void) {
+  if (t__enable_uart)
+    __real_uart_handler();
+  t__uart_interrupts = uart[0x1];
+  set_uart_interrupt(0);
+}
+
 extern volatile uint32* clint_timer_addr;
 static const uint32 timer_interval = 100000;
 byte t__auto_timeout = 1;
@@ -106,8 +142,10 @@ interrupt __real_handle_clk(void);
 interrupt __wrap_handle_clk(void) {
   t__timeout -= 1;
   *clint_timer_addr += timer_interval;
-  if (t__timeout == 0 && t__auto_timeout)
+  if (t__timeout <= 0 && t__timeout > -2 && t__auto_timeout) {
+    t__timeout = -1;
     t__break();
+  }
   if (t__default_timer)
     asm volatile(
 		 "ld ra,136(sp)\n"
@@ -134,6 +172,7 @@ interrupt __wrap_handle_clk(void) {
 
 byte t__default_resched = 0;
 byte t__skip_resched = 0;
+static int32 t__pinned_thread = -1;
 int32 __real_resched(void);
 int32 __wrap_resched(void) {
   t__resched_called += 1;
@@ -151,13 +190,23 @@ int32 __wrap_resched(void) {
     return v;
   }
   else {
-    if (current_thread != 0) {
-      uint32 old = current_thread;
+    uint32 i, old = current_thread;
+    if (t__pinned_thread == -1) {
+      for (i=0; i<NTHREADS; i++)
+	if (thread_table[(i + current_thread) % NTHREADS].state == TH_READY)
+	  break;
       if (thread_table[current_thread].state == TH_RUNNING)
 	thread_table[current_thread].state = TH_READY;
-      thread_table[0].state = TH_RUNNING;
-      current_thread = 0;
-      ctxsw(&(thread_table[0].stackptr), &(thread_table[old].stackptr));
+      thread_table[i].state = TH_RUNNING;
+      current_thread = i;
+      ctxsw(&(thread_table[i].stackptr), &(thread_table[old].stackptr));
+    }
+    else if (current_thread != t__pinned_thread) {
+      if (thread_table[current_thread].state == TH_RUNNING)
+	thread_table[current_thread].state = TH_READY;
+      thread_table[t__pinned_thread].state = TH_RUNNING;
+      current_thread = t__pinned_thread;
+      ctxsw(&(thread_table[t__pinned_thread].stackptr), &(thread_table[old].stackptr));
     }
   }
   return 0;
@@ -198,6 +247,7 @@ int32 __wrap_create_thread(void* proc, char* arg, uint32 arglen) {
 
 static uint32 run_idx = 0;
 byte __wrap_shell(char* arg) {
+  t__pinned_thread = current_thread;
 #if MILESTONE == 4
   t__ms4(run_idx);
 #elif MILESTONE == 5
@@ -238,8 +288,12 @@ void t__run(uint32 idx) {
 }
 
 void __wrap_initialize(void) {
+  t__timeout = (-1 & ~(0x1 << 31));
 #if MILESTONE < 4
   uart_init();
+#endif
+#if MILESTONE >= 8
+  t__ms8_setup();
 #endif
   t__run(0);
 }

@@ -1,26 +1,42 @@
 
 Running [2] general tests... DONE
-Running [6] malloc tests... DONE
-Running [5] free tests... DONE
+Running [6] getc tests... DONE
+Running [6] putc tests... DONE
+Running [4] handler (receive) tests... DONE
+Running [5] handler (transmit) tests... DONE
 
 ----------------------------
 
 General Tests:
-  Program Compiles:              OK
-  Heap initialized during boot:  OK
+  Program Compiles:            OK
+  TTY initialized during boot: OK
 
-Malloc Tests:
-  First small allocation correct:        OK
-  Second small allocation correct:       OK
-  Too big returns NULL:                  OK
-  Completely fill heap:                  OK
-  New block between allocations (small): OK
-  New block between allocations (fit):   OK
+getc Tests:
+  Thread blocks when no char available:   OK
+  Thread does not block when chars exist: OK
+  [Bonus] Semephore awaited in getc:      FAIL - Semaphore was not awaited
+  In buffer count modified:               OK
+  In buffer head was modified:            OK
+  Returns the correct character:          OK
 
-Free Tests:
-  Free last block:     OK
-  Free middle block:   OK
-  Coalesce down:       OK
-  Coalesce up:         OK
-  Free first:          OK
+putc Tests:
+  Thread blocks when buffer is full:             OK
+  Thread does not block when buffer is not full: OK
+  [Bonus] Semaphore awaited in putc:             FAIL - Semaphore was not waited
+  Character is added to the buffer:              OK
+  Out buffer count was modified:                 OK
+  UART interrupts enabled on call:               OK
+
+handler (receive) Tests:
+  RX handler returns if buffer is full: OK
+  Character placed into buffer:         OK
+  RX handler modifies in buffer count:  OK
+  [Bonus] Semaphore notifies getc:      FAIL - Semaphore was not signaled on character in
+
+handler (transmit) Tests:
+  TX handler sends character:           OK
+  TX handler modifies out buffer count: OK
+  TX handler modifies out buffer head:  OK
+  Disables uart interrupts on emtpy:    OK
+  [Bonus] Semaphore notifies putc:      FAIL - Semaphore was not signaled on write
 

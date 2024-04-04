@@ -5,6 +5,7 @@
 #include <thread.h>
 #include <queue.h>
 #include <malloc.h>
+#include <tty.h>
 /*
  *  This file contains the C code entry point executed by the kernel.
  *  It is called by the bootstrap sequence once the hardware is configured.
@@ -26,6 +27,7 @@ void initialize(void)
   char mask;
   mask = disable_interrupts();
   uart_init();
+  tty_init();
 
   printf("Kernel start: %x\n", text_start);
   printf("--Kernel size: %d\n", (data_start - text_start));
@@ -48,7 +50,7 @@ void initialize(void)
     thread_queue[i].qnext = i;
   }
 
-  // Initializing heap??
+  // Initializing heap
   heap_init();
 
   restore_interrupts(mask);

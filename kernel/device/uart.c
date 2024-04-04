@@ -1,5 +1,6 @@
 #include <barelib.h>
 #include <interrupts.h>
+#include <tty.h>
 
 #define UART_PRIO_ADDR        0xc000028   /*  These  values and  addresses  are used to  setup  */
 #define UART_ENABLE           0x400       /*  the UART on the PLIC.  The addresses must be set  */
@@ -30,7 +31,7 @@
 #define UART_INT_MASK 0xE                 /*  Mask for extracting interrupt data from reg      */
 
 static char readchar = NULL;
-static volatile byte* uart;
+volatile byte* uart;
 
 
 /* DO NOT Call these functions directly, ever.  Use `uart_putc` and `uart_getc` instead */
@@ -74,10 +75,24 @@ void set_uart_interrupt(byte enabled) {
  */
 void uart_handler(void) {
   byte code = uart[UART0_INT_STAT] & UART_INT_MASK;
-  if (code == UART_RX_INTR)                              /*  If interrupt was caused by a keypress                                                  */
-    readchar = uart[UART0_RW_REG];                       /*    Read UART and save the char in 'readchar'.  -- This text replaced in Milestone 8 --  */
-  else if (code == UART_TX_INTR)                         /*  If interrupt was caused by UART awaiting char                                          */
-    return;                                              /*    Do nothing, for now                         -- This text replaced in Milestone 8 --  */
+  if (code == UART_RX_INTR){                             /*  If interrupt was caused by a keypress                                                  */
+    readchar = uart[UART0_RW_REG];
+    if (tty_in_count < TTY_BUFFLEN){
+      tty_in[((tty_in_head+tty_in_count)%TTY_BUFFLEN)] = readchar;
+      tty_in_count++; 
+    }                                                     /*    Read UART and save the char in 'readchar'.  -- This text replaced in Milestone 8 --  */
+  }else if (code == UART_TX_INTR){                        /*  If interrupt was caused by UART awaiting char                                          */
+    if (tty_out_head < TTY_BUFFLEN){
+      uart[UART0_RW_REG] = tty_out[tty_out_head];
+      tty_out_head = (tty_out_head+1)%TTY_BUFFLEN;
+      tty_out_count--;
+    }
+    if (tty_out_count == 0){
+      set_uart_interrupt(0); // disable when tty_out buffer is empty
+    }
+    
+  }                                             /*    Do nothing, for now                         -- This text replaced in Milestone 8 --  */
+  return; 
 }
 
 /*
