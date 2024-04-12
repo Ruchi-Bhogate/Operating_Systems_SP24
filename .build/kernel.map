@@ -1,0 +1,1047 @@
+
+There are no discarded input sections
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+_sysmem          0x0000000080000000 0x0000000008000000 axw!rl
+*default*        0x0000000000000000 0xffffffffffffffff
+
+Linker script and memory map
+
+
+.text           0x0000000080000000     0xb91c
+                0x0000000080000000                PROVIDE (_mmap_text_start = ABSOLUTE (.))
+ *(.text.entry)
+ .text.entry    0x0000000080000000      0x16c .build/bootstrap_asm.o
+                0x0000000080000074                __noop
+ *(.text .text.*)
+ .text          0x000000008000016c      0x27a .build/create.o
+                0x000000008000016c                wrapper
+                0x00000000800001e8                create_thread
+ .text          0x00000000800003e6      0x2b2 .build/initialize.o
+                0x00000000800003e6                initialize
+ .text          0x0000000080000698       0xde .build/traps.o
+                0x0000000080000698                __sys_capture_syscall
+                0x00000000800006a6                raise_syscall
+                0x00000000800006f2                handle_exception
+ .text          0x0000000080000776      0x2de .build/queue.o
+                0x0000000080000776                thread_enqueue
+                0x00000000800008aa                thread_dequeue
+                0x0000000080000998                thread_remove
+ .text          0x0000000080000a54      0x2ca .build/bs.o
+                0x0000000080000a54                bs_mk_ramdisk
+                0x0000000080000b08                bs_stats
+                0x0000000080000b46                bs_free_ramdisk
+                0x0000000080000b8e                bs_read
+                0x0000000080000c56                bs_write
+ .text          0x0000000080000d1e      0x360 .build/sleep.o
+                0x0000000080000d1e                sleep
+                0x0000000080000f74                unsleep
+ .text          0x000000008000107e       0xa2 .build/join.o
+                0x000000008000107e                join_thread
+ .text          0x0000000080001120       0xca .build/kill.o
+                0x0000000080001120                kill_thread
+ .text          0x00000000800011ea       0x86 .build/resume.o
+                0x00000000800011ea                resume_thread
+ .text          0x0000000080001270      0x500 .build/fsutil.o
+                0x0000000080001270                fs_print_fsd
+                0x00000000800012f6                fs_print_mask
+                0x0000000080001414                fs_print_oft
+                0x00000000800014fc                fs_print_root
+                0x00000000800015a6                fs_print_fd
+ .text          0x0000000080001770      0x110 .build/resched.o
+                0x0000000080001770                resched
+ .text          0x0000000080001880       0x96 .build/suspend.o
+                0x0000000080001880                suspend_thread
+ .text          0x0000000080001916        0x0 .build/mmap.o
+ .text          0x0000000080001916      0x4aa .build/fs.o
+                0x0000000080001916                fs_setmaskbit
+                0x00000000800019a2                fs_clearmaskbit
+                0x0000000080001a3a                fs_getmaskbit
+                0x0000000080001a96                fs_mkfs
+                0x0000000080001bf8                fs_mount
+                0x0000000080001d3a                fs_umount
+ .text          0x0000000080001dc0      0x3c0 .build/uart.o
+                0x0000000080001dc0                __sys_putc
+                0x0000000080001e06                __sys_getc
+                0x0000000080001e68                uart_putc
+                0x0000000080001e94                uart_getc
+                0x0000000080001eb4                set_uart_interrupt
+                0x0000000080001f26                uart_handler
+                0x0000000080002088                uart_init
+ .text          0x0000000080002180       0xa0 .build/plic.o
+                0x0000000080002180                plic_init
+                0x00000000800021ac                handle_plic
+ .text          0x0000000080002220      0x136 .build/tty.o
+                0x0000000080002220                tty_init
+                0x000000008000222e                tty_getc
+                0x00000000800022c0                tty_putc
+ .text          0x0000000080002356      0x1e2 .build/timer.o
+                0x0000000080002356                clk_init
+                0x0000000080002382                handle_clk
+ .text          0x0000000080002538       0xfa .build/echo.o
+                0x0000000080002538                builtin_echo
+ .text          0x0000000080002632       0x50 .build/hello.o
+                0x0000000080002632                builtin_hello
+ .text          0x0000000080002682      0x244 .build/shell.o
+                0x0000000080002682                command_check
+                0x00000000800026f2                shell
+ .text          0x00000000800028c6       0x9e .build/barelib.o
+                0x00000000800028c6                memset
+                0x0000000080002912                memcpy
+ .text          0x0000000080002964      0x1ee .build/printf.o
+                0x0000000080002964                convert_to_hex_or_dec
+                0x00000000800029e8                printf
+ .text          0x0000000080002b52      0x276 .build/fs_open.o
+                0x0000000080002b52                fs_open
+ .text          0x0000000080002dc8       0xaa .build/fs_close.o
+                0x0000000080002dc8                fs_close
+ .text          0x0000000080002e72      0x2bc .build/malloc.o
+                0x0000000080002e72                heap_init
+                0x0000000080002f04                malloc
+                0x0000000080002ffc                merge
+                0x0000000080003060                free
+ .text          0x000000008000312e      0x2a0 .build/fs_create.o
+                0x000000008000312e                fs_create
+ .text          0x00000000800033ce       0x20 .build/interrupts_asm.o
+                0x00000000800033ce                set_interrupt
+                0x00000000800033d4                disable_interrupts
+                0x00000000800033da                enable_interrupts
+                0x00000000800033e0                restore_interrupts
+                0x00000000800033e6                is_interrupting
+ .text          0x00000000800033ee      0x116 .build/ctxsw_asm.o
+                0x00000000800033ee                _sys_thread_loaded
+                0x00000000800033f2                ctxsw
+                0x00000000800034ec                ctxload
+ .text          0x0000000080003504        0x0 .build/bootstrap_asm.o
+ .text          0x0000000080003504     0x1752 .build/ms4.o
+                0x0000000080004934                t__ms4
+ .text          0x0000000080004c56      0xc46 .build/ms8.o
+                0x00000000800055d2                t__ms8_setup
+                0x00000000800055e8                t__ms8
+ .text          0x000000008000589c     0x1398 .build/ms3.o
+                0x00000000800059c4                add_by_three
+                0x0000000080005ab2                state_tester
+                0x0000000080006a76                t__ms3
+ .text          0x0000000080006c34      0x4f2 .build/msutil.o
+                0x0000000080006c34                t__print
+                0x0000000080006c6e                t__strcpy
+                0x0000000080006cb2                t__hexcpy
+                0x0000000080006dae                t__intcpy
+                0x0000000080006ea0                t__mem_reset
+                0x0000000080006fce                t__runner
+                0x000000008000709a                t__printer
+ .text          0x0000000080007126      0xa94 .build/ms7.o
+                0x0000000080007a16                t__ms7
+ .text          0x0000000080007bba      0x814 .build/ms1.o
+                0x000000008000822a                t__ms1
+ .text          0x00000000800083ce      0xbbc .build/ms9.o
+                0x0000000080008d5e                t__ms9
+ .text          0x0000000080008f8a     0x14ca .build/ms5.o
+                0x000000008000a23a                t__ms5
+ .text          0x000000008000a454      0xa00 .build/wrappers.o
+                0x000000008000a454                t__raw_stdout
+                0x000000008000a46a                __wrap_uart_putc
+                0x000000008000a4e0                __wrap_uart_getc
+                0x000000008000a572                t__set_io
+                0x000000008000a674                t__check_io
+                0x000000008000a7b8                __wrap_sem_wait
+                0x000000008000a7fc                __wrap_sem_post
+                0x000000008000a830                __wrap_tty_init
+                0x000000008000a85c                __wrap_uart_handler
+                0x000000008000a8a6                __wrap_handle_clk
+                0x000000008000a9ac                __wrap_resched
+                0x000000008000abf6                __wrap_join_thread
+                0x000000008000ac34                __wrap_resume_thread
+                0x000000008000ac72                __wrap_create_thread
+                0x000000008000acc0                __wrap_shell
+                0x000000008000acf8                t__run
+                0x000000008000ad58                __wrap_initialize
+                0x000000008000ad84                __wrap_ctxload
+                0x000000008000adbc                __wrap_disable_interrupts
+                0x000000008000adcc                __wrap_restore_interrupts
+                0x000000008000ade0                __wrap_builtin_hello
+                0x000000008000ae1a                __wrap_builtin_echo
+ .text          0x000000008000ae54      0x882 .build/ms2.o
+                0x000000008000b4b8                t__ms2
+ .text          0x000000008000b6d6      0x244 .build/msutil_asm.o
+                0x000000008000b7d6                t__status
+                0x000000008000b7da                t__timeout
+                0x000000008000b7de                t__break
+                0x000000008000b7ee                t__reset
+                0x000000008000b7fe                t__with_timeout
+                0x000000008000b91c                . = ALIGN (0x4)
+ *fill*         0x000000008000b91a        0x2 
+                0x000000008000b91c                PROVIDE (_mmap_text_end = ABSOLUTE (.))
+
+.rodata         0x000000008000c000     0x5c66
+                0x000000008000c000                PROVIDE (_mmap_data_start = ABSOLUTE (.))
+ *(.srodata .srodata.*)
+ .srodata       0x000000008000c000        0x4 .build/timer.o
+                0x000000008000c000                timer_interval
+ .srodata       0x000000008000c004        0x4 .build/wrappers.o
+ *(.rodata .rodata.*)
+ .rodata        0x000000008000c008       0x7d .build/initialize.o
+ *fill*         0x000000008000c085        0x3 
+ .rodata        0x000000008000c088      0x1b4 .build/fsutil.o
+ *fill*         0x000000008000c23c        0x4 
+ .rodata        0x000000008000c240        0x4 .build/echo.o
+ *fill*         0x000000008000c244        0x4 
+ .rodata        0x000000008000c248       0x26 .build/hello.o
+ *fill*         0x000000008000c26e        0x2 
+ .rodata        0x000000008000c270       0x39 .build/shell.o
+ *fill*         0x000000008000c2a9        0x7 
+ .rodata        0x000000008000c2b0     0x1053 .build/ms4.o
+ *fill*         0x000000008000d303        0x5 
+ .rodata        0x000000008000d308      0xaab .build/ms8.o
+ *fill*         0x000000008000ddb3        0x5 
+ .rodata        0x000000008000ddb8      0xd2d .build/ms3.o
+ *fill*         0x000000008000eae5        0x3 
+ .rodata        0x000000008000eae8       0x32 .build/msutil.o
+ *fill*         0x000000008000eb1a        0x6 
+ .rodata        0x000000008000eb20      0x915 .build/ms7.o
+ *fill*         0x000000008000f435        0x3 
+ .rodata        0x000000008000f438      0x663 .build/ms1.o
+ *fill*         0x000000008000fa9b        0x5 
+ .rodata        0x000000008000faa0      0xb3e .build/ms9.o
+ *fill*         0x00000000800105de        0x2 
+ .rodata        0x00000000800105e0      0xd10 .build/ms5.o
+ .rodata        0x00000000800112f0      0x976 .build/ms2.o
+
+.eh_frame       0x0000000080011c68     0x19c8
+ .eh_frame      0x0000000080011c68       0x70 .build/create.o
+ .eh_frame      0x0000000080011cd8       0x30 .build/initialize.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x0000000080011d08       0xb8 .build/traps.o
+                                         0xc8 (size before relaxing)
+ .eh_frame      0x0000000080011dc0       0x70 .build/queue.o
+                                         0x88 (size before relaxing)
+ .eh_frame      0x0000000080011e30       0xc8 .build/bs.o
+                                         0xd8 (size before relaxing)
+ .eh_frame      0x0000000080011ef8       0x58 .build/sleep.o
+                                         0x70 (size before relaxing)
+ .eh_frame      0x0000000080011f50       0x28 .build/join.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x0000000080011f78       0x28 .build/kill.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x0000000080011fa0       0x28 .build/resume.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x0000000080011fc8       0xd0 .build/fsutil.o
+                                         0xe8 (size before relaxing)
+ .eh_frame      0x0000000080012098       0x30 .build/resched.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000800120c8       0x28 .build/suspend.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000800120f0       0xf0 .build/fs.o
+                                        0x108 (size before relaxing)
+ .eh_frame      0x00000000800121e0      0x118 .build/uart.o
+                                        0x128 (size before relaxing)
+ .eh_frame      0x00000000800122f8       0x90 .build/plic.o
+                                         0xa8 (size before relaxing)
+ .eh_frame      0x0000000080012388       0x78 .build/tty.o
+                                         0x88 (size before relaxing)
+ .eh_frame      0x0000000080012400       0x90 .build/timer.o
+                                         0xa8 (size before relaxing)
+ .eh_frame      0x0000000080012490       0x30 .build/echo.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000800124c0       0x28 .build/hello.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000800124e8       0x48 .build/shell.o
+                                         0x58 (size before relaxing)
+ .eh_frame      0x0000000080012530       0x48 .build/barelib.o
+                                         0x60 (size before relaxing)
+ .eh_frame      0x0000000080012578       0x58 .build/printf.o
+                                         0x68 (size before relaxing)
+ .eh_frame      0x00000000800125d0       0x28 .build/fs_open.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000800125f8       0x28 .build/fs_close.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x0000000080012620       0x98 .build/malloc.o
+                                         0xa8 (size before relaxing)
+ .eh_frame      0x00000000800126b8       0x30 .build/fs_create.o
+                                         0x40 (size before relaxing)
+ .eh_frame      0x00000000800126e8      0x198 .build/ms4.o
+                                        0x1a8 (size before relaxing)
+ .eh_frame      0x0000000080012880      0x198 .build/ms8.o
+                                        0x1a8 (size before relaxing)
+ .eh_frame      0x0000000080012a18      0x2b8 .build/ms3.o
+                                        0x2d0 (size before relaxing)
+ .eh_frame      0x0000000080012cd0      0x118 .build/msutil.o
+                                        0x128 (size before relaxing)
+ .eh_frame      0x0000000080012de8       0xd0 .build/ms7.o
+                                         0xe8 (size before relaxing)
+ .eh_frame      0x0000000080012eb8       0xd0 .build/ms1.o
+                                         0xe8 (size before relaxing)
+ .eh_frame      0x0000000080012f88      0x108 .build/ms9.o
+                                        0x118 (size before relaxing)
+ .eh_frame      0x0000000080013090      0x140 .build/ms5.o
+                                        0x150 (size before relaxing)
+ .eh_frame      0x00000000800131d0      0x388 .build/wrappers.o
+                                        0x3a0 (size before relaxing)
+ .eh_frame      0x0000000080013558       0xd8 .build/ms2.o
+                                         0xf0 (size before relaxing)
+
+.rela.dyn       0x0000000080013630        0x0
+ .rela.sdata    0x0000000080013630        0x0 .build/create.o
+ .rela.text.entry
+                0x0000000080013630        0x0 .build/create.o
+ .rela.text     0x0000000080013630        0x0 .build/create.o
+
+.data           0x0000000080013630      0x510
+                [!provide]                        PROVIDE (_mmap_write_start = ABSOLUTE (.))
+ *(.sdata .sdata.*)
+ .sdata         0x0000000080013630       0x14 .build/traps.o
+                0x0000000080013630                syscall_table
+                0x0000000080013638                sys_syscall_hook
+ .sdata         0x0000000080013644        0x8 .build/queue.o
+                0x0000000080013644                ready_list
+                0x0000000080013648                sleep_list
+ *fill*         0x000000008001364c        0x4 
+ .sdata         0x0000000080013650       0x38 .build/mmap.o
+                0x0000000080013650                text_start
+                0x0000000080013658                text_end
+                0x0000000080013660                data_start
+                0x0000000080013668                data_end
+                0x0000000080013670                bss_start
+                0x0000000080013678                mem_start
+                0x0000000080013680                mem_end
+ .sdata         0x0000000080013688       0x10 .build/uart.o
+                0x0000000080013688                sys_putc_hook
+                0x0000000080013690                sys_getc_hook
+ .sdata         0x0000000080013698        0x8 .build/timer.o
+                0x0000000080013698                clint_timer_addr
+ .sdata         0x00000000800136a0       0x10 .build/ms4.o
+ .sdata         0x00000000800136b0       0x10 .build/ms3.o
+ .sdata         0x00000000800136c0        0x8 .build/ms5.o
+ .sdata         0x00000000800136c8       0x18 .build/wrappers.o
+                0x00000000800136d8                t__enable_uart
+                0x00000000800136d9                t__auto_timeout
+ *(.data .data.*)
+ .data          0x00000000800136e0        0x0 .build/create.o
+ .data          0x00000000800136e0        0x0 .build/initialize.o
+ .data          0x00000000800136e0        0x0 .build/traps.o
+ .data          0x00000000800136e0        0x0 .build/queue.o
+ .data          0x00000000800136e0        0x0 .build/bs.o
+ .data          0x00000000800136e0        0x0 .build/sleep.o
+ .data          0x00000000800136e0        0x0 .build/join.o
+ .data          0x00000000800136e0        0x0 .build/kill.o
+ .data          0x00000000800136e0        0x0 .build/resume.o
+ .data          0x00000000800136e0        0x0 .build/fsutil.o
+ .data          0x00000000800136e0        0x0 .build/resched.o
+ .data          0x00000000800136e0        0x0 .build/suspend.o
+ .data          0x00000000800136e0        0x0 .build/mmap.o
+ .data          0x00000000800136e0        0x0 .build/fs.o
+ .data          0x00000000800136e0        0x0 .build/uart.o
+ .data          0x00000000800136e0        0x0 .build/plic.o
+ .data          0x00000000800136e0        0x0 .build/tty.o
+ .data          0x00000000800136e0        0x0 .build/timer.o
+ .data          0x00000000800136e0        0x0 .build/echo.o
+ .data          0x00000000800136e0        0x0 .build/hello.o
+ .data          0x00000000800136e0        0x0 .build/shell.o
+ .data          0x00000000800136e0        0x0 .build/barelib.o
+ .data          0x00000000800136e0        0x0 .build/printf.o
+ .data          0x00000000800136e0        0x0 .build/fs_open.o
+ .data          0x00000000800136e0        0x0 .build/fs_close.o
+ .data          0x00000000800136e0        0x0 .build/malloc.o
+ .data          0x00000000800136e0        0x0 .build/fs_create.o
+ .data          0x00000000800136e0        0x0 .build/interrupts_asm.o
+ .data          0x00000000800136e0        0x0 .build/ctxsw_asm.o
+ .data          0x00000000800136e0        0x0 .build/bootstrap_asm.o
+ .data          0x00000000800136e0       0x90 .build/ms4.o
+ .data          0x0000000080013770       0xb8 .build/ms8.o
+ .data          0x0000000080013828       0x90 .build/ms3.o
+ .data          0x00000000800138b8        0x0 .build/msutil.o
+ .data          0x00000000800138b8       0x68 .build/ms7.o
+ .data          0x0000000080013920       0x58 .build/ms1.o
+ .data          0x0000000080013978       0x98 .build/ms9.o
+ .data          0x0000000080013a10       0xa0 .build/ms5.o
+ .data          0x0000000080013ab0        0x0 .build/wrappers.o
+ .data          0x0000000080013ab0       0x90 .build/ms2.o
+ .data          0x0000000080013b40        0x0 .build/msutil_asm.o
+                0x0000000080013b40                PROVIDE (_mmap_data_end = ABSOLUTE (.))
+
+.bss            0x0000000080013b40     0x1490
+                0x0000000080013b40                PROVIDE (_mmap_bss_start = ABSOLUTE (.))
+ *(.sbss .sbss.*)
+ .sbss          0x0000000080013b40        0x4 .build/create.o
+                0x0000000080013b40                current_thread
+ .sbss          0x0000000080013b44        0x4 .build/initialize.o
+                0x0000000080013b44                boot_complete
+ .sbss          0x0000000080013b48        0x8 .build/fs.o
+                0x0000000080013b48                fsd
+ .sbss          0x0000000080013b50        0x8 .build/uart.o
+                0x0000000080013b50                uart
+ .sbss          0x0000000080013b58       0x18 .build/tty.o
+                0x0000000080013b58                tty_in_sem
+                0x0000000080013b5c                tty_out_sem
+                0x0000000080013b60                tty_in_head
+                0x0000000080013b64                tty_in_count
+                0x0000000080013b68                tty_out_head
+                0x0000000080013b6c                tty_out_count
+ .sbss          0x0000000080013b70        0x4 .build/shell.o
+                0x0000000080013b70                result
+ .sbss          0x0000000080013b74       0x2c .build/wrappers.o
+                0x0000000080013b74                t__resched_called
+                0x0000000080013b78                t__uart_putc_called
+                0x0000000080013b7c                t__uart_getc_called
+                0x0000000080013b80                t__join_thread_called
+                0x0000000080013b84                t__resume_thread_called
+                0x0000000080013b88                t__create_thread_called
+                0x0000000080013b8c                t__ctxload_called
+                0x0000000080013b90                t__hello_called
+                0x0000000080013b94                t__echo_called
+                0x0000000080013b98                t__wait_called
+                0x0000000080013b99                t__block_wait
+                0x0000000080013b9a                t__post_called
+                0x0000000080013b9b                t__tty_init_called
+                0x0000000080013b9c                t__uart_interrupts
+                0x0000000080013b9d                t__default_timer
+                0x0000000080013b9e                t__default_resched
+                0x0000000080013b9f                t__skip_resched
+ *(.bss .bss.*)
+ .bss           0x0000000080013ba0      0x2a0 .build/create.o
+                0x0000000080013ba0                thread_table
+ .bss           0x0000000080013e40        0x0 .build/initialize.o
+ .bss           0x0000000080013e40        0x4 .build/traps.o
+ *fill*         0x0000000080013e44        0x4 
+ .bss           0x0000000080013e48      0x108 .build/queue.o
+                0x0000000080013e48                thread_queue
+ .bss           0x0000000080013f50       0x10 .build/bs.o
+ .bss           0x0000000080013f60        0x0 .build/sleep.o
+ .bss           0x0000000080013f60        0x0 .build/join.o
+ .bss           0x0000000080013f60        0x0 .build/kill.o
+ .bss           0x0000000080013f60        0x0 .build/resume.o
+ .bss           0x0000000080013f60        0x0 .build/fsutil.o
+ .bss           0x0000000080013f60        0x0 .build/resched.o
+ .bss           0x0000000080013f60        0x0 .build/suspend.o
+ .bss           0x0000000080013f60        0x0 .build/mmap.o
+ .bss           0x0000000080013f60      0x2a8 .build/fs.o
+                0x0000000080013f60                oft
+ .bss           0x0000000080014208        0x1 .build/uart.o
+ .bss           0x0000000080014209        0x0 .build/plic.o
+ *fill*         0x0000000080014209        0x7 
+ .bss           0x0000000080014210      0x100 .build/tty.o
+                0x0000000080014210                tty_in
+                0x0000000080014290                tty_out
+ .bss           0x0000000080014310        0x0 .build/timer.o
+ .bss           0x0000000080014310        0x0 .build/echo.o
+ .bss           0x0000000080014310        0x0 .build/hello.o
+ .bss           0x0000000080014310        0x0 .build/shell.o
+ .bss           0x0000000080014310        0x0 .build/barelib.o
+ .bss           0x0000000080014310        0x0 .build/printf.o
+ .bss           0x0000000080014310        0x0 .build/fs_open.o
+ .bss           0x0000000080014310        0x0 .build/fs_close.o
+ .bss           0x0000000080014310        0x8 .build/malloc.o
+ .bss           0x0000000080014318        0x0 .build/fs_create.o
+ .bss           0x0000000080014318        0x0 .build/interrupts_asm.o
+ .bss           0x0000000080014318        0x0 .build/ctxsw_asm.o
+ .bss           0x0000000080014318        0x0 .build/bootstrap_asm.o
+ .bss           0x0000000080014318       0xa0 .build/ms4.o
+ .bss           0x00000000800143b8       0xc6 .build/ms8.o
+ *fill*         0x000000008001447e        0x2 
+ .bss           0x0000000080014480       0xa2 .build/ms3.o
+ *fill*         0x0000000080014522        0x2 
+ .bss           0x0000000080014524        0x4 .build/msutil.o
+ .bss           0x0000000080014528       0x70 .build/ms7.o
+ .bss           0x0000000080014598       0x58 .build/ms1.o
+ .bss           0x00000000800145f0       0x98 .build/ms9.o
+ .bss           0x0000000080014688       0xa8 .build/ms5.o
+ .bss           0x0000000080014730      0x804 .build/wrappers.o
+ *fill*         0x0000000080014f34        0x4 
+ .bss           0x0000000080014f38       0x98 .build/ms2.o
+ .bss           0x0000000080014fd0        0x0 .build/msutil_asm.o
+                [!provide]                        PROVIDE (_mmap_bss_end = ABSOLUTE (.))
+                0x000000008001cfd0                . = (. + 0x8000)
+                0x000000008001cfd0                PROVIDE (_mmap_kstack_top = ABSOLUTE (.))
+                0x000000008001dfd0                . = (. + 0x1000)
+                0x000000008000c800                PROVIDE (_mmap_global_ptr = (_mmap_data_start + 0x800))
+                0x000000008001dfd0                PROVIDE (_mmap_mem_start = ABSOLUTE (.))
+                0x0000000087ffffff                PROVIDE (_mmap_mem_end = ((ORIGIN (_sysmem) + LENGTH (_sysmem)) - 0x1))
+LOAD .build/create.o
+LOAD .build/initialize.o
+LOAD .build/traps.o
+LOAD .build/queue.o
+LOAD .build/bs.o
+LOAD .build/sleep.o
+LOAD .build/join.o
+LOAD .build/kill.o
+LOAD .build/resume.o
+LOAD .build/fsutil.o
+LOAD .build/resched.o
+LOAD .build/suspend.o
+LOAD .build/mmap.o
+LOAD .build/fs.o
+LOAD .build/uart.o
+LOAD .build/plic.o
+LOAD .build/tty.o
+LOAD .build/timer.o
+LOAD .build/echo.o
+LOAD .build/hello.o
+LOAD .build/shell.o
+LOAD .build/barelib.o
+LOAD .build/printf.o
+LOAD .build/fs_open.o
+LOAD .build/fs_close.o
+LOAD .build/malloc.o
+LOAD .build/fs_create.o
+LOAD .build/interrupts_asm.o
+LOAD .build/ctxsw_asm.o
+LOAD .build/bootstrap_asm.o
+LOAD .build/ms4.o
+LOAD .build/ms8.o
+LOAD .build/ms3.o
+LOAD .build/msutil.o
+LOAD .build/ms7.o
+LOAD .build/ms1.o
+LOAD .build/ms9.o
+LOAD .build/ms5.o
+LOAD .build/wrappers.o
+LOAD .build/ms2.o
+LOAD .build/msutil_asm.o
+OUTPUT(.build/kernel.elf elf64-littleriscv)
+
+.debug_info     0x0000000000000000     0x784e
+ .debug_info    0x0000000000000000      0x2a6 .build/create.o
+ .debug_info    0x00000000000002a6      0x31f .build/initialize.o
+ .debug_info    0x00000000000005c5      0x158 .build/traps.o
+ .debug_info    0x000000000000071d      0x2b2 .build/queue.o
+ .debug_info    0x00000000000009cf      0x2a7 .build/bs.o
+ .debug_info    0x0000000000000c76      0x2b7 .build/sleep.o
+ .debug_info    0x0000000000000f2d      0x186 .build/join.o
+ .debug_info    0x00000000000010b3      0x1aa .build/kill.o
+ .debug_info    0x000000000000125d      0x19c .build/resume.o
+ .debug_info    0x00000000000013f9      0x376 .build/fsutil.o
+ .debug_info    0x000000000000176f      0x1a1 .build/resched.o
+ .debug_info    0x0000000000001910      0x18b .build/suspend.o
+ .debug_info    0x0000000000001a9b      0x134 .build/mmap.o
+ .debug_info    0x0000000000001bcf      0x46b .build/fs.o
+ .debug_info    0x000000000000203a      0x2cf .build/uart.o
+ .debug_info    0x0000000000002309       0xe5 .build/plic.o
+ .debug_info    0x00000000000023ee      0x223 .build/tty.o
+ .debug_info    0x0000000000002611      0x21d .build/timer.o
+ .debug_info    0x000000000000282e      0x168 .build/echo.o
+ .debug_info    0x0000000000002996       0xc7 .build/hello.o
+ .debug_info    0x0000000000002a5d      0x235 .build/shell.o
+ .debug_info    0x0000000000002c92       0xcd .build/barelib.o
+ .debug_info    0x0000000000002d5f      0x1aa .build/printf.o
+ .debug_info    0x0000000000002f09      0x327 .build/fs_open.o
+ .debug_info    0x0000000000003230      0x194 .build/fs_close.o
+ .debug_info    0x00000000000033c4      0x212 .build/malloc.o
+ .debug_info    0x00000000000035d6      0x30d .build/fs_create.o
+ .debug_info    0x00000000000038e3       0x28 .build/interrupts_asm.o
+ .debug_info    0x000000000000390b       0x29 .build/ctxsw_asm.o
+ .debug_info    0x0000000000003934       0x29 .build/bootstrap_asm.o
+ .debug_info    0x000000000000395d      0x740 .build/ms4.o
+ .debug_info    0x000000000000409d      0x690 .build/ms8.o
+ .debug_info    0x000000000000472d      0x8ef .build/ms3.o
+ .debug_info    0x000000000000501c      0x494 .build/msutil.o
+ .debug_info    0x00000000000054b0      0x40c .build/ms7.o
+ .debug_info    0x00000000000058bc      0x4bd .build/ms1.o
+ .debug_info    0x0000000000005d79      0x757 .build/ms9.o
+ .debug_info    0x00000000000064d0      0x635 .build/ms5.o
+ .debug_info    0x0000000000006b05      0x914 .build/wrappers.o
+ .debug_info    0x0000000000007419      0x40c .build/ms2.o
+ .debug_info    0x0000000000007825       0x29 .build/msutil_asm.o
+
+.debug_abbrev   0x0000000000000000     0x31ee
+ .debug_abbrev  0x0000000000000000      0x19e .build/create.o
+ .debug_abbrev  0x000000000000019e      0x169 .build/initialize.o
+ .debug_abbrev  0x0000000000000307      0x103 .build/traps.o
+ .debug_abbrev  0x000000000000040a      0x14b .build/queue.o
+ .debug_abbrev  0x0000000000000555      0x142 .build/bs.o
+ .debug_abbrev  0x0000000000000697      0x156 .build/sleep.o
+ .debug_abbrev  0x00000000000007ed      0x10d .build/join.o
+ .debug_abbrev  0x00000000000008fa      0x126 .build/kill.o
+ .debug_abbrev  0x0000000000000a20      0x10c .build/resume.o
+ .debug_abbrev  0x0000000000000b2c      0x164 .build/fsutil.o
+ .debug_abbrev  0x0000000000000c90       0xe9 .build/resched.o
+ .debug_abbrev  0x0000000000000d79      0x10c .build/suspend.o
+ .debug_abbrev  0x0000000000000e85       0x68 .build/mmap.o
+ .debug_abbrev  0x0000000000000eed      0x1d3 .build/fs.o
+ .debug_abbrev  0x00000000000010c0      0x19e .build/uart.o
+ .debug_abbrev  0x000000000000125e       0xba .build/plic.o
+ .debug_abbrev  0x0000000000001318      0x127 .build/tty.o
+ .debug_abbrev  0x000000000000143f      0x151 .build/timer.o
+ .debug_abbrev  0x0000000000001590       0xeb .build/echo.o
+ .debug_abbrev  0x000000000000167b       0x99 .build/hello.o
+ .debug_abbrev  0x0000000000001714      0x14f .build/shell.o
+ .debug_abbrev  0x0000000000001863       0x7e .build/barelib.o
+ .debug_abbrev  0x00000000000018e1       0xf4 .build/printf.o
+ .debug_abbrev  0x00000000000019d5      0x116 .build/fs_open.o
+ .debug_abbrev  0x0000000000001aeb       0xf6 .build/fs_close.o
+ .debug_abbrev  0x0000000000001be1      0x101 .build/malloc.o
+ .debug_abbrev  0x0000000000001ce2      0x15b .build/fs_create.o
+ .debug_abbrev  0x0000000000001e3d       0x14 .build/interrupts_asm.o
+ .debug_abbrev  0x0000000000001e51       0x14 .build/ctxsw_asm.o
+ .debug_abbrev  0x0000000000001e65       0x14 .build/bootstrap_asm.o
+ .debug_abbrev  0x0000000000001e79      0x225 .build/ms4.o
+ .debug_abbrev  0x000000000000209e      0x1c4 .build/ms8.o
+ .debug_abbrev  0x0000000000002262      0x292 .build/ms3.o
+ .debug_abbrev  0x00000000000024f4      0x1ae .build/msutil.o
+ .debug_abbrev  0x00000000000026a2      0x197 .build/ms7.o
+ .debug_abbrev  0x0000000000002839      0x191 .build/ms1.o
+ .debug_abbrev  0x00000000000029ca      0x1c9 .build/ms9.o
+ .debug_abbrev  0x0000000000002b93      0x1e2 .build/ms5.o
+ .debug_abbrev  0x0000000000002d75      0x2fe .build/wrappers.o
+ .debug_abbrev  0x0000000000003073      0x167 .build/ms2.o
+ .debug_abbrev  0x00000000000031da       0x14 .build/msutil_asm.o
+
+.debug_aranges  0x0000000000000000      0x7a0
+ .debug_aranges
+                0x0000000000000000       0x30 .build/create.o
+ .debug_aranges
+                0x0000000000000030       0x30 .build/initialize.o
+ .debug_aranges
+                0x0000000000000060       0x30 .build/traps.o
+ .debug_aranges
+                0x0000000000000090       0x30 .build/queue.o
+ .debug_aranges
+                0x00000000000000c0       0x30 .build/bs.o
+ .debug_aranges
+                0x00000000000000f0       0x30 .build/sleep.o
+ .debug_aranges
+                0x0000000000000120       0x30 .build/join.o
+ .debug_aranges
+                0x0000000000000150       0x30 .build/kill.o
+ .debug_aranges
+                0x0000000000000180       0x30 .build/resume.o
+ .debug_aranges
+                0x00000000000001b0       0x30 .build/fsutil.o
+ .debug_aranges
+                0x00000000000001e0       0x30 .build/resched.o
+ .debug_aranges
+                0x0000000000000210       0x30 .build/suspend.o
+ .debug_aranges
+                0x0000000000000240       0x20 .build/mmap.o
+ .debug_aranges
+                0x0000000000000260       0x30 .build/fs.o
+ .debug_aranges
+                0x0000000000000290       0x30 .build/uart.o
+ .debug_aranges
+                0x00000000000002c0       0x30 .build/plic.o
+ .debug_aranges
+                0x00000000000002f0       0x30 .build/tty.o
+ .debug_aranges
+                0x0000000000000320       0x30 .build/timer.o
+ .debug_aranges
+                0x0000000000000350       0x30 .build/echo.o
+ .debug_aranges
+                0x0000000000000380       0x30 .build/hello.o
+ .debug_aranges
+                0x00000000000003b0       0x30 .build/shell.o
+ .debug_aranges
+                0x00000000000003e0       0x30 .build/barelib.o
+ .debug_aranges
+                0x0000000000000410       0x30 .build/printf.o
+ .debug_aranges
+                0x0000000000000440       0x30 .build/fs_open.o
+ .debug_aranges
+                0x0000000000000470       0x30 .build/fs_close.o
+ .debug_aranges
+                0x00000000000004a0       0x30 .build/malloc.o
+ .debug_aranges
+                0x00000000000004d0       0x30 .build/fs_create.o
+ .debug_aranges
+                0x0000000000000500       0x30 .build/interrupts_asm.o
+ .debug_aranges
+                0x0000000000000530       0x30 .build/ctxsw_asm.o
+ .debug_aranges
+                0x0000000000000560       0x30 .build/bootstrap_asm.o
+ .debug_aranges
+                0x0000000000000590       0x30 .build/ms4.o
+ .debug_aranges
+                0x00000000000005c0       0x30 .build/ms8.o
+ .debug_aranges
+                0x00000000000005f0       0x30 .build/ms3.o
+ .debug_aranges
+                0x0000000000000620       0x30 .build/msutil.o
+ .debug_aranges
+                0x0000000000000650       0x30 .build/ms7.o
+ .debug_aranges
+                0x0000000000000680       0x30 .build/ms1.o
+ .debug_aranges
+                0x00000000000006b0       0x30 .build/ms9.o
+ .debug_aranges
+                0x00000000000006e0       0x30 .build/ms5.o
+ .debug_aranges
+                0x0000000000000710       0x30 .build/wrappers.o
+ .debug_aranges
+                0x0000000000000740       0x30 .build/ms2.o
+ .debug_aranges
+                0x0000000000000770       0x30 .build/msutil_asm.o
+
+.debug_line     0x0000000000000000     0x7e9b
+ .debug_line    0x0000000000000000      0x2ad .build/create.o
+ .debug_line    0x00000000000002ad      0x1dd .build/initialize.o
+ .debug_line    0x000000000000048a       0xd9 .build/traps.o
+ .debug_line    0x0000000000000563      0x1d7 .build/queue.o
+ .debug_line    0x000000000000073a      0x2ce .build/bs.o
+ .debug_line    0x0000000000000a08      0x272 .build/sleep.o
+ .debug_line    0x0000000000000c7a       0xcb .build/join.o
+ .debug_line    0x0000000000000d45      0x104 .build/kill.o
+ .debug_line    0x0000000000000e49       0xb8 .build/resume.o
+ .debug_line    0x0000000000000f01      0x40b .build/fsutil.o
+ .debug_line    0x000000000000130c       0xf7 .build/resched.o
+ .debug_line    0x0000000000001403       0xce .build/suspend.o
+ .debug_line    0x00000000000014d1       0x43 .build/mmap.o
+ .debug_line    0x0000000000001514      0x474 .build/fs.o
+ .debug_line    0x0000000000001988      0x361 .build/uart.o
+ .debug_line    0x0000000000001ce9       0xb6 .build/plic.o
+ .debug_line    0x0000000000001d9f      0x131 .build/tty.o
+ .debug_line    0x0000000000001ed0      0x196 .build/timer.o
+ .debug_line    0x0000000000002066      0x12e .build/echo.o
+ .debug_line    0x0000000000002194       0x96 .build/hello.o
+ .debug_line    0x000000000000222a      0x268 .build/shell.o
+ .debug_line    0x0000000000002492       0xfe .build/barelib.o
+ .debug_line    0x0000000000002590      0x1ba .build/printf.o
+ .debug_line    0x000000000000274a      0x2aa .build/fs_open.o
+ .debug_line    0x00000000000029f4       0x9e .build/fs_close.o
+ .debug_line    0x0000000000002a92      0x2fc .build/malloc.o
+ .debug_line    0x0000000000002d8e      0x32a .build/fs_create.o
+ .debug_line    0x00000000000030b8       0x88 .build/interrupts_asm.o
+ .debug_line    0x0000000000003140      0x1e6 .build/ctxsw_asm.o
+ .debug_line    0x0000000000003326      0x146 .build/bootstrap_asm.o
+ .debug_line    0x000000000000346c      0x970 .build/ms4.o
+ .debug_line    0x0000000000003ddc      0x7e1 .build/ms8.o
+ .debug_line    0x00000000000045bd      0xa20 .build/ms3.o
+ .debug_line    0x0000000000004fdd      0x4b7 .build/msutil.o
+ .debug_line    0x0000000000005494      0x68a .build/ms7.o
+ .debug_line    0x0000000000005b1e      0x4aa .build/ms1.o
+ .debug_line    0x0000000000005fc8      0x80a .build/ms9.o
+ .debug_line    0x00000000000067d2      0x8e8 .build/ms5.o
+ .debug_line    0x00000000000070ba      0x718 .build/wrappers.o
+ .debug_line    0x00000000000077d2      0x4bf .build/ms2.o
+ .debug_line    0x0000000000007c91      0x20a .build/msutil_asm.o
+
+.debug_str      0x0000000000000000     0x10f3
+ .debug_str     0x0000000000000000     0x10f3 .build/create.o
+                                        0x1c6 (size before relaxing)
+ .debug_str     0x00000000000010f3      0x246 .build/initialize.o
+ .debug_str     0x00000000000010f3      0x152 .build/traps.o
+ .debug_str     0x00000000000010f3      0x1b6 .build/queue.o
+ .debug_str     0x00000000000010f3      0x19e .build/bs.o
+ .debug_str     0x00000000000010f3      0x1f8 .build/sleep.o
+ .debug_str     0x00000000000010f3      0x17a .build/join.o
+ .debug_str     0x00000000000010f3      0x181 .build/kill.o
+ .debug_str     0x00000000000010f3      0x18f .build/resume.o
+ .debug_str     0x00000000000010f3      0x210 .build/fsutil.o
+ .debug_str     0x00000000000010f3      0x184 .build/resched.o
+ .debug_str     0x00000000000010f3      0x184 .build/suspend.o
+ .debug_str     0x00000000000010f3      0x17c .build/mmap.o
+ .debug_str     0x00000000000010f3      0x25c .build/fs.o
+ .debug_str     0x00000000000010f3      0x1fc .build/uart.o
+ .debug_str     0x00000000000010f3      0x11e .build/plic.o
+ .debug_str     0x00000000000010f3      0x182 .build/tty.o
+ .debug_str     0x00000000000010f3      0x1b8 .build/timer.o
+ .debug_str     0x00000000000010f3      0x10a .build/echo.o
+ .debug_str     0x00000000000010f3       0xe2 .build/hello.o
+ .debug_str     0x00000000000010f3      0x163 .build/shell.o
+ .debug_str     0x00000000000010f3       0x7e .build/barelib.o
+ .debug_str     0x00000000000010f3      0x121 .build/printf.o
+ .debug_str     0x00000000000010f3      0x1e2 .build/fs_open.o
+ .debug_str     0x00000000000010f3      0x137 .build/fs_close.o
+ .debug_str     0x00000000000010f3      0x15e .build/malloc.o
+ .debug_str     0x00000000000010f3      0x1e5 .build/fs_create.o
+ .debug_str     0x00000000000010f3       0x3a .build/interrupts_asm.o
+ .debug_str     0x00000000000010f3       0x35 .build/ctxsw_asm.o
+ .debug_str     0x00000000000010f3       0x2b .build/bootstrap_asm.o
+ .debug_str     0x00000000000010f3      0x391 .build/ms4.o
+ .debug_str     0x00000000000010f3      0x2f0 .build/ms8.o
+ .debug_str     0x00000000000010f3      0x42e .build/ms3.o
+ .debug_str     0x00000000000010f3      0x1dd .build/msutil.o
+ .debug_str     0x00000000000010f3      0x1ce .build/ms7.o
+ .debug_str     0x00000000000010f3      0x240 .build/ms1.o
+ .debug_str     0x00000000000010f3      0x2f7 .build/ms9.o
+ .debug_str     0x00000000000010f3      0x2f0 .build/ms5.o
+ .debug_str     0x00000000000010f3      0x5ac .build/wrappers.o
+ .debug_str     0x00000000000010f3      0x219 .build/ms2.o
+ .debug_str     0x00000000000010f3       0x37 .build/msutil_asm.o
+
+.debug_line_str
+                0x0000000000000000      0x3fe
+ .debug_line_str
+                0x0000000000000000      0x3fe .build/create.o
+                                         0x8c (size before relaxing)
+ .debug_line_str
+                0x00000000000003fe       0xc5 .build/initialize.o
+ .debug_line_str
+                0x00000000000003fe       0x73 .build/traps.o
+ .debug_line_str
+                0x00000000000003fe       0x84 .build/queue.o
+ .debug_line_str
+                0x00000000000003fe       0x85 .build/bs.o
+ .debug_line_str
+                0x00000000000003fe       0x91 .build/sleep.o
+ .debug_line_str
+                0x00000000000003fe       0x86 .build/join.o
+ .debug_line_str
+                0x00000000000003fe       0x8e .build/kill.o
+ .debug_line_str
+                0x00000000000003fe       0x94 .build/resume.o
+ .debug_line_str
+                0x00000000000003fe       0x84 .build/fsutil.o
+ .debug_line_str
+                0x00000000000003fe       0x8a .build/resched.o
+ .debug_line_str
+                0x00000000000003fe       0x97 .build/suspend.o
+ .debug_line_str
+                0x00000000000003fe       0x70 .build/mmap.o
+ .debug_line_str
+                0x00000000000003fe       0x85 .build/fs.o
+ .debug_line_str
+                0x00000000000003fe       0x83 .build/uart.o
+ .debug_line_str
+                0x00000000000003fe       0x7d .build/plic.o
+ .debug_line_str
+                0x00000000000003fe       0x80 .build/tty.o
+ .debug_line_str
+                0x00000000000003fe       0x90 .build/timer.o
+ .debug_line_str
+                0x00000000000003fe       0x73 .build/echo.o
+ .debug_line_str
+                0x00000000000003fe       0x76 .build/hello.o
+ .debug_line_str
+                0x00000000000003fe       0x87 .build/shell.o
+ .debug_line_str
+                0x00000000000003fe       0x5a .build/barelib.o
+ .debug_line_str
+                0x00000000000003fe       0x79 .build/printf.o
+ .debug_line_str
+                0x00000000000003fe       0x78 .build/fs_open.o
+ .debug_line_str
+                0x00000000000003fe       0x7b .build/fs_close.o
+ .debug_line_str
+                0x00000000000003fe       0x79 .build/malloc.o
+ .debug_line_str
+                0x00000000000003fe       0x7e .build/fs_create.o
+ .debug_line_str
+                0x00000000000003fe       0x2e .build/interrupts_asm.o
+ .debug_line_str
+                0x00000000000003fe       0x29 .build/ctxsw_asm.o
+ .debug_line_str
+                0x00000000000003fe       0x1f .build/bootstrap_asm.o
+ .debug_line_str
+                0x00000000000003fe       0x8d .build/ms4.o
+ .debug_line_str
+                0x00000000000003fe       0x75 .build/ms8.o
+ .debug_line_str
+                0x00000000000003fe       0x80 .build/ms3.o
+ .debug_line_str
+                0x00000000000003fe       0x89 .build/msutil.o
+ .debug_line_str
+                0x00000000000003fe       0x78 .build/ms7.o
+ .debug_line_str
+                0x00000000000003fe       0x78 .build/ms1.o
+ .debug_line_str
+                0x00000000000003fe       0x74 .build/ms9.o
+ .debug_line_str
+                0x00000000000003fe       0x88 .build/ms5.o
+ .debug_line_str
+                0x00000000000003fe       0x87 .build/wrappers.o
+ .debug_line_str
+                0x00000000000003fe       0x6f .build/ms2.o
+ .debug_line_str
+                0x00000000000003fe       0x2b .build/msutil_asm.o
+
+.comment        0x0000000000000000        0xf
+ .comment       0x0000000000000000        0xf .build/create.o
+                                         0x10 (size before relaxing)
+ .comment       0x000000000000000f       0x10 .build/initialize.o
+ .comment       0x000000000000000f       0x10 .build/traps.o
+ .comment       0x000000000000000f       0x10 .build/queue.o
+ .comment       0x000000000000000f       0x10 .build/bs.o
+ .comment       0x000000000000000f       0x10 .build/sleep.o
+ .comment       0x000000000000000f       0x10 .build/join.o
+ .comment       0x000000000000000f       0x10 .build/kill.o
+ .comment       0x000000000000000f       0x10 .build/resume.o
+ .comment       0x000000000000000f       0x10 .build/fsutil.o
+ .comment       0x000000000000000f       0x10 .build/resched.o
+ .comment       0x000000000000000f       0x10 .build/suspend.o
+ .comment       0x000000000000000f       0x10 .build/mmap.o
+ .comment       0x000000000000000f       0x10 .build/fs.o
+ .comment       0x000000000000000f       0x10 .build/uart.o
+ .comment       0x000000000000000f       0x10 .build/plic.o
+ .comment       0x000000000000000f       0x10 .build/tty.o
+ .comment       0x000000000000000f       0x10 .build/timer.o
+ .comment       0x000000000000000f       0x10 .build/echo.o
+ .comment       0x000000000000000f       0x10 .build/hello.o
+ .comment       0x000000000000000f       0x10 .build/shell.o
+ .comment       0x000000000000000f       0x10 .build/barelib.o
+ .comment       0x000000000000000f       0x10 .build/printf.o
+ .comment       0x000000000000000f       0x10 .build/fs_open.o
+ .comment       0x000000000000000f       0x10 .build/fs_close.o
+ .comment       0x000000000000000f       0x10 .build/malloc.o
+ .comment       0x000000000000000f       0x10 .build/fs_create.o
+ .comment       0x000000000000000f       0x10 .build/ms4.o
+ .comment       0x000000000000000f       0x10 .build/ms8.o
+ .comment       0x000000000000000f       0x10 .build/ms3.o
+ .comment       0x000000000000000f       0x10 .build/msutil.o
+ .comment       0x000000000000000f       0x10 .build/ms7.o
+ .comment       0x000000000000000f       0x10 .build/ms1.o
+ .comment       0x000000000000000f       0x10 .build/ms9.o
+ .comment       0x000000000000000f       0x10 .build/ms5.o
+ .comment       0x000000000000000f       0x10 .build/wrappers.o
+ .comment       0x000000000000000f       0x10 .build/ms2.o
+
+.note.GNU-stack
+                0x0000000000000000        0x0
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/create.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/initialize.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/traps.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/queue.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/bs.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/sleep.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/join.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/kill.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/resume.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/fsutil.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/resched.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/suspend.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/mmap.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/fs.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/uart.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/plic.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/tty.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/timer.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/echo.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/hello.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/shell.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/barelib.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/printf.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/fs_open.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/fs_close.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/malloc.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/fs_create.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms4.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms8.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms3.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/msutil.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms7.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms1.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms9.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms5.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/wrappers.o
+ .note.GNU-stack
+                0x0000000000000000        0x0 .build/ms2.o
+
+.riscv.attributes
+                0x0000000000000000       0x41
+ .riscv.attributes
+                0x0000000000000000       0x34 .build/create.o
+ .riscv.attributes
+                0x0000000000000034       0x34 .build/initialize.o
+ .riscv.attributes
+                0x0000000000000068       0x38 .build/traps.o
+ .riscv.attributes
+                0x00000000000000a0       0x34 .build/queue.o
+ .riscv.attributes
+                0x00000000000000d4       0x34 .build/bs.o
+ .riscv.attributes
+                0x0000000000000108       0x34 .build/sleep.o
+ .riscv.attributes
+                0x000000000000013c       0x34 .build/join.o
+ .riscv.attributes
+                0x0000000000000170       0x34 .build/kill.o
+ .riscv.attributes
+                0x00000000000001a4       0x34 .build/resume.o
+ .riscv.attributes
+                0x00000000000001d8       0x34 .build/fsutil.o
+ .riscv.attributes
+                0x000000000000020c       0x34 .build/resched.o
+ .riscv.attributes
+                0x0000000000000240       0x34 .build/suspend.o
+ .riscv.attributes
+                0x0000000000000274       0x34 .build/mmap.o
+ .riscv.attributes
+                0x00000000000002a8       0x34 .build/fs.o
+ .riscv.attributes
+                0x00000000000002dc       0x34 .build/uart.o
+ .riscv.attributes
+                0x0000000000000310       0x38 .build/plic.o
+ .riscv.attributes
+                0x0000000000000348       0x34 .build/tty.o
+ .riscv.attributes
+                0x000000000000037c       0x38 .build/timer.o
+ .riscv.attributes
+                0x00000000000003b4       0x34 .build/echo.o
+ .riscv.attributes
+                0x00000000000003e8       0x34 .build/hello.o
+ .riscv.attributes
+                0x000000000000041c       0x34 .build/shell.o
+ .riscv.attributes
+                0x0000000000000450       0x34 .build/barelib.o
+ .riscv.attributes
+                0x0000000000000484       0x34 .build/printf.o
+ .riscv.attributes
+                0x00000000000004b8       0x34 .build/fs_open.o
+ .riscv.attributes
+                0x00000000000004ec       0x34 .build/fs_close.o
+ .riscv.attributes
+                0x0000000000000520       0x34 .build/malloc.o
+ .riscv.attributes
+                0x0000000000000554       0x34 .build/fs_create.o
+ .riscv.attributes
+                0x0000000000000588       0x3f .build/interrupts_asm.o
+ .riscv.attributes
+                0x00000000000005c7       0x3f .build/ctxsw_asm.o
+ .riscv.attributes
+                0x0000000000000606       0x3f .build/bootstrap_asm.o
+ .riscv.attributes
+                0x0000000000000645       0x34 .build/ms4.o
+ .riscv.attributes
+                0x0000000000000679       0x34 .build/ms8.o
+ .riscv.attributes
+                0x00000000000006ad       0x34 .build/ms3.o
+ .riscv.attributes
+                0x00000000000006e1       0x34 .build/msutil.o
+ .riscv.attributes
+                0x0000000000000715       0x34 .build/ms7.o
+ .riscv.attributes
+                0x0000000000000749       0x34 .build/ms1.o
+ .riscv.attributes
+                0x000000000000077d       0x34 .build/ms9.o
+ .riscv.attributes
+                0x00000000000007b1       0x34 .build/ms5.o
+ .riscv.attributes
+                0x00000000000007e5       0x41 .build/wrappers.o
+ .riscv.attributes
+                0x0000000000000826       0x34 .build/ms2.o
+ .riscv.attributes
+                0x000000000000085a       0x3f .build/msutil_asm.o

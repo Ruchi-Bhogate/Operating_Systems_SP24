@@ -6,6 +6,7 @@
 #include <queue.h>
 #include <malloc.h>
 #include <tty.h>
+#include<fs.h>
 /*
  *  This file contains the C code entry point executed by the kernel.
  *  It is called by the bootstrap sequence once the hardware is configured.
@@ -53,8 +54,14 @@ void initialize(void)
   // Initializing heap
   heap_init();
 
+  // Initializing file system
+  bs_mk_ramdisk(MDEV_BLOCK_SIZE,MDEV_NUM_BLOCKS);
+  fs_mkfs();
+  fs_mount();
+
   restore_interrupts(mask);
   boot_complete = 1;
+
 
   int shell_id = create_thread(shell, NULL, 0);
   current_thread = shell_id;

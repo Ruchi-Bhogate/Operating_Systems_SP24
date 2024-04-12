@@ -4,7 +4,8 @@ void* memset(void* s, int c, int n) {
   return s;
 }
 
+
 void* memcpy(void* dst, const void* src, int n) {
-  while (n-- >= 0) ((char*)dst)[n] = ((char*)src)[n];
+  while (--n >= 0) ((char*)dst)[n] = ((char*)src)[n];
   return dst;
 }
