@@ -3,7 +3,7 @@
 
 #include <barelib.h>
 
-#define EMPTY     -1            /* Used in FS whenever a field's state is undefined or unused */
+#define EMPTY     -1          /* Used in FS whenever a field's state is undefined or unused */
 
 #define SB_BIT 0                /* Alias for the super block index                            */
 #define BM_BIT 1                /* Alias for the bitmask block index                          */

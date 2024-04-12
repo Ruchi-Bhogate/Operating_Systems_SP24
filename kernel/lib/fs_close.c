@@ -10,14 +10,13 @@ extern filetable_t oft[NUM_FD];
  *  error.                                                */
 int32 fs_close(int32 fd) {
   // If oft entry is FSTATE_CLOSED, function MUST return -1
-    if (oft[fd].state == FSTATE_CLOSED) {
-        return -1;
-    }
+  if (oft[fd].state == FSTATE_CLOSED) {
+    return -1;
+  }
+  // Function MUST write oft inode to the ramdisk
 
-    // Function MUST write oft inode to the ramdisk
-
-    oft[fd].state = FSTATE_CLOSED;
-    inode_t inode_block = oft[fd].inode;
-    bs_write(inode_block.id, oft[fd].head, &inode_block, sizeof(inode_t));
-    return 0;
+  oft[fd].state = FSTATE_CLOSED;
+  inode_t inode_block = oft[fd].inode;
+  bs_write(inode_block.id, oft[fd].head, &inode_block, sizeof(inode_t));
+  return 0;
 }

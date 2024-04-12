@@ -1,0 +1,35 @@
+
+Running [4] general tests... DONE
+Running [7] create tests... DONE
+Running [5] open tests... DONE
+Running [3] close tests... DONE
+
+----------------------------
+
+General Tests:
+  Program Compiles:   OK
+  Creates blockstore: OK
+  Creates filesystem: OK
+  Mounts filesystem:  OK
+
+Create Tests:
+  Returns error if directory is full:            OK
+  Returns error if filename exists in directory: OK
+  Returns error if no blocks remain for file:    OK
+  Sets filename to a directory entry:            OK
+  Sets inode index to a directory entry:         OK
+  Marks inode as used in bitmask:                OK
+  Saves changes back to the blockstore:          OK
+
+Open Tests:
+  Returns error if file is already open:    OK
+  Returns error if the file does not exist: OK
+  Adds file to the open file table:         OK
+  Reads file's control block into inode:    FAIL - Second oft inode record has incorrect id
+  Returns the index of the oft entry:       OK
+
+Close Tests:
+  Returns error if file is not open:     OK
+  Writes inode block back to blockstore: OK
+  Removes file from open file table:     OK
+

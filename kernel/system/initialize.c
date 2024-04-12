@@ -56,8 +56,9 @@ void initialize(void)
 
   // Initializing file system
   bs_mk_ramdisk(MDEV_BLOCK_SIZE,MDEV_NUM_BLOCKS);
-  fs_mkfs();
   fs_mount();
+  fs_mkfs();
+  
 
   restore_interrupts(mask);
   boot_complete = 1;
