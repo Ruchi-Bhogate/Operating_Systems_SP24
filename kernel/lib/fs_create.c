@@ -65,5 +65,5 @@ int32 fs_create(char* filename) {
     // Write the modified freemask to the ramdisk (block device)
     bs_write(SB_BIT, 0, fsd, sizeof(fsystem_t)); 
     bs_write(BM_BIT, 0, fsd->freemask, fsd->freemasksz);
-    return 0; // Successfully created the new file
+    return 0;
 }
