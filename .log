@@ -1,14 +1,32 @@
-Kernel start: 0x80000000
---Kernel size: 4096
-Globals start: 0x80004000
-Heap/Stack start: 0x8000e558
---Free Memory Available: 33539753
-bareOS$ Hellp
-Unknown command
-bareOS$ Hello o
-Unknown command
-bareOS$ Hello e
-Unknown command
-bareOS$ hello w
-Hello, w!
-bareOS$ 
+
+Running [1] general tests... DONE
+Running [12] read tests... DONE
+Running [6] write tests... DONE
+
+----------------------------
+
+General Tests:
+  Program Compiles:   OK
+
+Read Tests:
+  Read file from start <partial-block>:       OK
+  Read file from start <complete-block>:      OK
+  Read file from start <multi-block>:         OK
+  Read file from start <multi-block-partial>: OK
+  Read block offset <partial>:                OK
+  Read block offset <rest-of-block>:          OK
+  Read block offset <multi-block>:            OK
+  Read block offset <multi-block-partial>:    OK
+  Read later block <partial>:                 OK
+  Read later block <full block>:              OK
+  Read later block <multi-block>:             OK
+  Read more than filesize:                    OK
+
+Write Tests:
+  Write start of file <partial>:        OK
+  Write start of file <complete-block>: OK
+  Write start of file <multi-block>:    OK
+  Overwrite existing file:              FAIL - Data wrote past requeste write length
+  Append to end of file <partial>:      OK
+  Append to end of file <multi-block>:  OK
+
