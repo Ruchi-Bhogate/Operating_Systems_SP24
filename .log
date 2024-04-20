@@ -26,7 +26,7 @@ Write Tests:
   Write start of file <partial>:        OK
   Write start of file <complete-block>: OK
   Write start of file <multi-block>:    OK
-  Overwrite existing file:              FAIL - Data wrote past requeste write length
+  Overwrite existing file:              OK
   Append to end of file <partial>:      OK
   Append to end of file <multi-block>:  OK
 

@@ -23,6 +23,15 @@ uint32 fs_read(uint32 fd, char* buff, uint32 len) {
   int start_block_offset = head % block_size;
   int remaining_bytes = inode->size - head;
   int bytes_to_read = (len < remaining_bytes) ? len : remaining_bytes;
+
+  // bs_read(block_index, block_offset, buff, read_amount);
+  //     bytes_read += read_amount;
+  //     buff += read_amount;
+  //     bytes_to_read -= read_amount;
+  //     head += read_amount;
+  //     start_block_index += 1;
+  //     start_block_offset = 0;
+
   while (bytes_to_read > 0) {
       int block_index = inode->blocks[start_block_index];
       int block_offset = start_block_offset;
