@@ -1,6 +1,16 @@
+#include "complete.h"
 #include <barelib.h>
-#if MILESTONE >= 3
+#ifdef MILESTONE_3
 #include <thread.h>
+#endif
+#ifdef MILESTONE_4
+#include <queue.h>
+#endif
+#ifdef MILESTONE_7
+#include <malloc.h>
+#endif
+#ifdef MILESTONE_8
+#include <tty.h>
 #endif
 
 #define IO_LEN 1024
@@ -13,37 +23,38 @@ extern uint32 boot_complete;
 extern uint32 t__status;
 extern int32  t__timeout;
 void t__break(void);
-void t__mem_reset(uint32);
+void t__mem_snapshot(void);
+void t__mem_reset(void);
 
-#ifdef MILESTONE_IMP
+#if MILESTONE == 1
 void t__ms1(uint32);
 #endif
-#if MILESTONE_IMP > 1
+#if MILESTONE == 2
 void t__ms2(uint32);
 #endif
-#if MILESTONE_IMP > 2
+#if MILESTONE == 3
 void t__ms3(uint32);
 #endif
-#if MILESTONE_IMP > 3
+#if MILESTONE == 4
 void t__ms4(uint32);
 #endif
-#if MILESTONE_IMP > 4
+#if MILESTONE == 5
 void t__ms5(uint32);
 #endif
-#if MILESTONE_IMP > 5
+#if MILESTONE == 6
 void t__ms6(uint32);
 #endif
-#if MILESTONE_IMP > 6
+#if MILESTONE == 7
 void t__ms7(uint32);
 #endif
-#if MILESTONE_IMP > 7
+#if MILESTONE == 8
 void t__ms8(uint32);
 void t__ms8_setup(void);
 #endif
-#if MILESTONE_IMP > 8
+#if MILESTONE == 9
 void t__ms9(uint32);
 #endif
-#if MILESTONE_IMP > 9
+#if MILESTONE == 10
 void t__ms10(uint32);
 #endif
 
@@ -73,6 +84,17 @@ char __wrap_uart_putc(char ch) {
   return ch;
 }
 
+static byte t__enable_tty;
+void __real_tty_putc(char);
+void __wrap_tty_putc(char ch) {
+#if MILESTONE == 8
+  if (t__enable_tty)
+    __real_tty_putc(ch);
+#else
+  __wrap_uart_putc(ch);
+#endif
+}
+
 char __real_uart_getc(void);
 char __wrap_uart_getc(void) {
   t__uart_getc_called += 1;
@@ -80,6 +102,15 @@ char __wrap_uart_getc(void) {
   if (t__stdin_expects[1] > 0 && t__stdin_expects[0] >= t__stdin_expects[1])
     while (1);
   return t__stdin[(t__uart_getc_called - 1) % IO_LEN];
+}
+
+char __real_tty_getc(void);
+char __wrap_tty_getc(void) {
+#if MILESTONE == 8
+  return __real_tty_getc();
+#else
+  return __wrap_uart_getc();
+#endif
 }
 
 void t__set_io(const char* stdin, int32 stdin_c, int32 stdout_c) {
@@ -172,7 +203,9 @@ interrupt __wrap_handle_clk(void) {
 
 byte t__default_resched = 0;
 byte t__skip_resched = 0;
+#ifdef MILESTONE_3
 static int32 t__pinned_thread = -1;
+#endif
 int32 __real_resched(void);
 int32 __wrap_resched(void) {
   t__resched_called += 1;
@@ -190,11 +223,32 @@ int32 __wrap_resched(void) {
     return v;
   }
   else {
+#ifdef MILESTONE_3
+#ifdef MILESTONE_4
+    uint32 old = current_thread, new;
+    new = thread_queue[ready_list].qnext;
+    thread_queue[thread_queue[new].qnext].qprev = ready_list;
+    thread_queue[ready_list].qnext = thread_queue[new].qnext;
+    thread_queue[new].qnext = thread_queue[new].qprev = new;
+
+    if (new == NTHREADS) return NTHREADS;
+    if (thread_table[old].state == TH_READY || thread_table[old].state == TH_RUNNING) {
+      thread_queue[old].qnext = ready_list;
+      thread_queue[old].qprev = thread_queue[ready_list].qprev;
+      thread_queue[thread_queue[ready_list].qprev].qnext = old;
+      thread_queue[ready_list].qprev = old;
+      thread_table[old].state = TH_READY;
+    }
+    thread_table[new].state = TH_RUNNING;
+    current_thread = new;
+    ctxsw(&(thread_table[new].stackptr), &(thread_table[old].stackptr));
+#else
     uint32 i, old = current_thread;
     if (t__pinned_thread == -1) {
       for (i=0; i<NTHREADS; i++)
 	if (thread_table[(i + current_thread) % NTHREADS].state == TH_READY)
 	  break;
+      i = (i + current_thread) % NTHREADS;
       if (thread_table[current_thread].state == TH_RUNNING)
 	thread_table[current_thread].state = TH_READY;
       thread_table[i].state = TH_RUNNING;
@@ -208,6 +262,8 @@ int32 __wrap_resched(void) {
       current_thread = t__pinned_thread;
       ctxsw(&(thread_table[t__pinned_thread].stackptr), &(thread_table[old].stackptr));
     }
+#endif
+#endif
   }
   return 0;
 }
@@ -215,7 +271,7 @@ int32 __wrap_resched(void) {
 int32 __real_join_thread(uint32 threadid);
 int32 __wrap_join_thread(uint32 threadid) {
   t__join_thread_called += 1;
-#if MILESTONE < 3
+#ifndef MILESTONE_3
   return 1;
 #else
   return __real_join_thread(threadid);
@@ -225,7 +281,7 @@ int32 __wrap_join_thread(uint32 threadid) {
 int32 __real_resume_thread(uint32 threadid);
 int32 __wrap_resume_thread(uint32 threadid) {
   t__resume_thread_called += 1;
-#if MILESTONE < 3
+#ifndef MILESTONE_3
   return 1;
 #else
   return __real_resume_thread(threadid);
@@ -235,10 +291,7 @@ int32 __wrap_resume_thread(uint32 threadid) {
 int32 __real_create_thread(void* proc, char* arg, uint32 arglen);
 int32 __wrap_create_thread(void* proc, char* arg, uint32 arglen) {
   t__create_thread_called += 1;
-#if MILESTONE < 3
-  byte (*fn)(char*) = (byte (*)(char*))proc;
-  thread_table[1].retval = fn(arg);
-  thread_table[1].state = TH_DEFUNCT;
+#ifndef MILESTONE_3
   return 1;
 #else
   return __real_create_thread(proc, arg, arglen);
@@ -247,16 +300,18 @@ int32 __wrap_create_thread(void* proc, char* arg, uint32 arglen) {
 
 static uint32 run_idx = 0;
 byte __wrap_shell(char* arg) {
+#ifdef MILESTONE_3
   t__pinned_thread = current_thread;
-#if MILESTONE == 4
-  t__ms4(run_idx);
-#elif MILESTONE == 5
+#endif
+#if MILESTONE == 5
   t__ms5(run_idx);
 #elif MILESTONE == 6
   t__ms6(run_idx);
 #elif MILESTONE == 7
+  heap_init();
   t__ms7(run_idx);
 #elif MILESTONE == 8
+  t__enable_tty = 1;
   t__ms8(run_idx);
 #elif MILESTONE == 9
   t__ms9(run_idx);
@@ -270,39 +325,50 @@ byte __wrap_shell(char* arg) {
 void __real_initialize(void);
 void t__run(uint32 idx) {
   run_idx = idx;
+  t__enable_tty = 1;
   t__default_resched = 0;
   t__default_timer = 0;
   t__skip_resched = 0;
   boot_complete = 0;
-  t__mem_reset(0);
+  t__mem_reset();
 #if MILESTONE == 1
   t__ms1(run_idx);
 #elif MILESTONE == 2
+#ifdef MILESTONE_3
+  thread_table[0].state = TH_RUNNING;
+#endif
+  t__mem_snapshot();
   t__ms2(run_idx);
 #elif MILESTONE == 3
   t__default_resched = 1;
   t__ms3(run_idx);
-#elif MILESTONE >= 4
+#elif MILESTONE == 4
+  thread_table[0].state = TH_RUNNING;
+  t__ms4(run_idx);
+#elif MILESTONE > 4
+#if MILESTONE == 8
+  t__enable_tty = 0;
+  t__ms8_setup();
+#endif
   __real_initialize();
 #endif
 }
 
 void __wrap_initialize(void) {
   t__timeout = (-1 & ~(0x1 << 31));
-#if MILESTONE < 4
+#if MILESTONE < 5
   uart_init();
-#endif
-#if MILESTONE >= 8
-  t__ms8_setup();
 #endif
   t__run(0);
 }
 
+#ifdef MILESTONE_3
 void __real_ctxload(uint64**);
 void __wrap_ctxload(uint64** proc) {
   t__ctxload_called += 1;
   __real_ctxload(proc);
 }
+#endif
 
 byte __wrap_disable_interrupts(void) {
   return 0x0;
@@ -312,7 +378,7 @@ void __wrap_restore_interrupts(byte v) {
   return;
 }
 
-
+#ifdef MILESTONE_2
 byte __real_builtin_hello(char* arg);
 byte __wrap_builtin_hello(char* arg) {
   t__hello_called += 1;
@@ -324,3 +390,4 @@ byte __wrap_builtin_echo(char* arg) {
   t__echo_called += 1;
   return __real_builtin_echo(arg);
 }
+#endif

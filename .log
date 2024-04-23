@@ -6,7 +6,7 @@ Running [6] write tests... DONE
 ----------------------------
 
 General Tests:
-  Program Compiles:   OK
+  Program Compiles:                           OK
 
 Read Tests:
   Read file from start <partial-block>:       OK
@@ -23,10 +23,10 @@ Read Tests:
   Read more than filesize:                    OK
 
 Write Tests:
-  Write start of file <partial>:        OK
-  Write start of file <complete-block>: OK
-  Write start of file <multi-block>:    OK
-  Overwrite existing file:              OK
-  Append to end of file <partial>:      OK
-  Append to end of file <multi-block>:  OK
+  Write start of file <partial>:              OK
+  Write start of file <complete-block>:       OK
+  Write start of file <multi-block>:          OK
+  Overwrite existing file:                    OK
+  Append to end of file <partial>:            OK
+  Append to end of file <multi-block>:        OK
 
