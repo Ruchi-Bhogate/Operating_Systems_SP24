@@ -1,32 +1,37 @@
 
 Running [1] general tests... DONE
-Running [12] read tests... DONE
-Running [6] write tests... DONE
+Running [11] sleep tests... DONE
+Running [5] unsleep tests... DONE
+Running [4] resched tests... DONE
 
 ----------------------------
 
 General Tests:
-  Program Compiles:                           OK
+  Program Compiles:                OK
 
-Read Tests:
-  Read file from start <partial-block>:       OK
-  Read file from start <complete-block>:      OK
-  Read file from start <multi-block>:         OK
-  Read file from start <multi-block-partial>: OK
-  Read block offset <partial>:                OK
-  Read block offset <rest-of-block>:          OK
-  Read block offset <multi-block>:            OK
-  Read block offset <multi-block-partial>:    OK
-  Read later block <partial>:                 OK
-  Read later block <full block>:              OK
-  Read later block <multi-block>:             OK
-  Read more than filesize:                    OK
+Sleep Tests:
+  Sleep queue is initialized:      OK
+  Sets thread's state:             OK
+  Adds thread to queue:            OK
+  Key set to sleep time [first]:   OK
+  Thread removed from ready queue: OK
+  Longer sleep added in place:     OK
+  Longer sleep key is difference:  OK
+  Shorter sleep added at head:     OK
+  Queue adjusted for new head:     OK
+  Intermediate sleep inserted:     OK
+  Intermediate sleep adjusts keys: OK
 
-Write Tests:
-  Write start of file <partial>:              OK
-  Write start of file <complete-block>:       OK
-  Write start of file <multi-block>:          OK
-  Overwrite existing file:                    OK
-  Append to end of file <partial>:            OK
-  Append to end of file <multi-block>:        OK
+Unsleep Tests:
+  Returns -1 when empty:           OK
+  Removed from head:               OK
+  Adjusts next key [head]:         OK
+  Remove from middle:              OK
+  Adjusts next key [middle]:       OK
+
+Resched Tests:
+  Clock decrements head:           OK
+  Zero delay threads removed:      OK
+  Removed multiple zero threads:   OK
+  Removed threads readied:         OK
 

@@ -80,7 +80,7 @@ int32 unsleep(uint32 threadid) {
   thread_table[threadid].state = TH_READY;
   thread_enqueue(ready_list,threadid);
   thread_queue[id].key = thread_queue[id].key + key_value;
-  raise_syscall(RESCHED);
+  //raise_syscall(RESCHED);
   
   restore_interrupts(mask);
   return 0;
